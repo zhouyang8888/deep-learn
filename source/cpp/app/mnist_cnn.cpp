@@ -283,7 +283,10 @@ void mnist::construct_net()
 
 		mnist_net->add_drop(0.8);
 
-		mnist_net->add_cnn(100, 14, 14, 50, 3, 3, LAMBDA);
+		mnist_net->add_cnn(100, 14, 14, 10, 3, 3, LAMBDA);
+		mnist_net->add_relu(10 * 14 * 14);
+
+		mnist_net->add_cnn(10, 14, 14, 50, 3, 3, LAMBDA);
 		mnist_net->add_relu(50 * 14 * 14);
 		// mnist_net->add_mp(50, 14, 14, 2, 2);
 
