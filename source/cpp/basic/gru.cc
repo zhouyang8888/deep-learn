@@ -18,10 +18,21 @@
 #ifndef __gru__
 #define __gru__
 
+#include "gru.h"
 #include "matrix0.h"
 #include "net_layer.h"
 
-gru::gru(matrix* x, matrix* ht_1, matrix* ht, int len, int xwidth, int hwidth, float lambda);
+gru::gru(matrix* x, matrix* ht_1, matrix* ht, matrix* y 
+		, matrix* dx, matrix* dht_1, matrix* dht, matrix* dy
+		, int xwidth, int hwidth, float lambda)
+	: x(x), h1(ht_1), h(ht), y(y)
+	  , xwidth(xwidth), hwidth(hwidth)
+	  , dx(dx), dh1(dht_1), dh(dht), dy(dy)
+	  , lambda(lambda)
+{
+
+}
+
 class gru : net_layer {
 	public:
 		matrix* x;    // m
