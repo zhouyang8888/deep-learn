@@ -155,9 +155,9 @@ void mnist::construct_net()
 						{
 							if (j != targetj) {
 								if (output->get_val(i, j) >= targetv)
-									std::cout << color_macro::YELLOW << output->get_val(i, j) << " ";
+									std::cout << color_macro::WHITE << output->get_val(i, j) << " ";
 								else if (output->get_val(i, j) >= targetv - 0.2f)
-									std::cout << color_macro::MAGENTA << output->get_val(i, j) << " ";
+									std::cout << color_macro::BLUE << output->get_val(i, j) << " ";
 								else
 									std::cout << color_macro::GREEN << output->get_val(i, j) << " ";
 							}
