@@ -23,7 +23,7 @@
 
 class net_layer {
 	public:
-		virtual void eval() = 0;
+		virtual void eval(const bool train) = 0;
 		virtual void bp() = 0;
 		virtual void stat(const char* str) = 0;
 		inline net_layer() {

@@ -34,7 +34,7 @@ sigmoid_layer::~sigmoid_layer()
 
 }
 
-void sigmoid_layer::eval()
+void sigmoid_layer::eval(const bool train)
 {
 	ele_op::sigmoid(&y, *x);
 }

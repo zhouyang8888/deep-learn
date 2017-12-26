@@ -34,7 +34,7 @@ relu_layer::~relu_layer()
 
 }
 
-void relu_layer::eval()
+void relu_layer::eval(const bool train)
 {
 	ele_op::relu(&y, *x);
 }

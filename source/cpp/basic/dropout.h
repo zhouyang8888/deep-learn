@@ -34,7 +34,7 @@ class dropout : public net_layer {
 	public:
 		dropout(matrix* x, matrix* y, matrix* dx, matrix* dy, float prob);
 		~dropout();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		void stat(const char* str);
 		inline matrix*& get_y() { return y; }

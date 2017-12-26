@@ -34,7 +34,7 @@ softplus_layer::~softplus_layer()
 
 }
 
-void softplus_layer::eval()
+void softplus_layer::eval(const bool train)
 {
 	ele_op::softplus(&y, *x);
 }

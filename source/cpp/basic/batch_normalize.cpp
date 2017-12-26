@@ -25,6 +25,7 @@
 #include <iostream>
 #include <time.h>
 #include <cmath>
+#include <cstring>
 
 batch_normalize::batch_normalize(matrix* x, matrix* y, matrix* dx, matrix* dy, float lambda) : 
 	m(x->get_row()), f(x->get_col()), x(x), y(y), dx(dx), dy(dy), lambda(lambda), 
@@ -92,7 +93,7 @@ batch_normalize::~batch_normalize()
 	delete gd_a_b;
 }
 
-void batch_normalize::eval()
+void batch_normalize::eval(const bool train)
 {
 	ele_op::mean_row_vectors(*mu, *x);
 	ele_op::variance_row_vectors(*var, *mu, *x);

@@ -441,7 +441,7 @@ void mnist::int_reverse(int& i)
 
 int main(int argc, char** argv)
 {
-	mnist m("/Users/zhouyang/ML/web-data/mnist-unzip/");
+	mnist m("~/data/web-data/mnist-unzip/");
 	m.load_data();
 	m.set_batch_size(1000);
 	m.construct_net();

@@ -67,7 +67,7 @@ class batch_normalize : public net_layer {
 	public:
 		batch_normalize(matrix* x, matrix* y, matrix* dx, matrix* dy, float lambda=0.1f);
 		~batch_normalize();
-		void eval();
+		void eval(const bool train);
 		void grad();
 		void update();
 		void bp();

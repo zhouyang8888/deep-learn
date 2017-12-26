@@ -21,7 +21,7 @@
 #include <cmath>
 #include <iostream>
 #include <time.h>
-// #include <atomic>
+#include <limits>
 
 const double gaussian::epsilon = std::numeric_limits<double>::min();
 const double gaussian::two_pi = 2 * 3.14159265358979323846;

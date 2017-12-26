@@ -68,7 +68,7 @@ fc_layer::~fc_layer()
 	delete gd_a_b;
 }
 
-void fc_layer::eval()
+void fc_layer::eval(const bool train)
 {
 	matrix::multiply(&y, *x, *w);
 	y->plus_row_row(*b);

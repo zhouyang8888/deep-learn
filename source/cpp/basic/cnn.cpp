@@ -81,7 +81,7 @@ cnn::~cnn()
 	// delete gd_a_b;
 }
 
-void cnn::eval()
+void cnn::eval(const bool train)
 {
 	to3d(mx, x, xd);
 

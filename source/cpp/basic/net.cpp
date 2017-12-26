@@ -205,9 +205,9 @@ void net::fill_in_y(const float* y, int len)
 	expected->copy_from_array(y, len);
 }
 
-void net::eval()
+void net::eval(const bool train)
 {
-	std::for_each(std::begin(layers), std::end(layers), [](net_layer* layer){ layer->eval(); });
+	std::for_each(std::begin(layers), std::end(layers), [=](net_layer* layer){ layer->eval(train); });
 }
 	
 void net::bp()
@@ -244,7 +244,13 @@ void net::collapse_bn_to_fc(const vector<int>& bns, const vector<int>& fcs)
 		layers[fcs[i]]->get_y() = layers[bns[i]]->get_y();
 		layers[fcs[i]]->get_dy() = layers[bns[i]]->get_dy();
 	}
+
+    int dropi = drops.size() - 1;
 	for (int i = bns.size() - 1; i >= 0; --i) {
+        while (dropi >= 0 && drops[dropi] > bns[i]) {
+            drops[dropi] -= (i + 1);
+            dropi--;
+        }
 		delete x[bns[i]];
 		x.erase(x.begin() + bns[i]);
 		delete dx[bns[i]];
@@ -259,8 +265,19 @@ void net::collapse_bn_to_fc(const vector<int>& bns, const vector<int>& fcs)
 
 void net::remove_drops()
 {
+    int bni = bns.size() - 1;
+    int fci = fcs.size() - 1;
 	for(int i = drops.size() - 1; i >= 0; --i) {
 		int sn = drops[i];
+
+        while (bni >= 0 && bns[bni] > sn) {
+            bns[bni] -= (i + 1);
+            bni--;
+        }
+        while (fci >= 0 && fcs[fci] > sn) {
+            fcs[fci] -= (i + 1);
+            fci--;
+        }
 
 		layers[sn + 1]->get_x() = layers[sn]->get_x();
 		layers[sn + 1]->get_dx() = layers[sn]->get_dx();
@@ -358,7 +375,7 @@ void net::batch(float& loss_val, float& accu_val
 	fill_in_x(x, xlen);
 	fill_in_y(y, ylen);
 
-	eval();
+	eval(train);
 	loss_val = loss();
 	accu_val = accuracy();
 

@@ -36,7 +36,7 @@ avgpooling::~avgpooling()
 {
 }
 
-void avgpooling::eval()
+void avgpooling::eval(const bool train)
 {
 	for (int bi = 0; bi < x->get_row(); ++bi) {
 		int sample = bi * x->get_col();

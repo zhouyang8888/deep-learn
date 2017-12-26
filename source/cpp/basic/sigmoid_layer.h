@@ -34,7 +34,7 @@ class sigmoid_layer : public net_layer {
 	public:
 		sigmoid_layer(matrix* x, matrix* y, matrix* dx, matrix* dy);
 		~sigmoid_layer();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		void stat(const char* str);
 

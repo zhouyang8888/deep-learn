@@ -34,7 +34,7 @@ tanh_layer::~tanh_layer()
 
 }
 
-void tanh_layer::eval()
+void tanh_layer::eval(const bool train)
 {
 	ele_op::tanh(&y, *x);
 }

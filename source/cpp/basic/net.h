@@ -61,7 +61,7 @@ class net {
 		void fill_in_x(const float* x, const int len);
 		void fill_in_y(const float* y, const int len);
 
-		void eval();
+		void eval(const bool train=true);
 		void bp();
 
 		void dump_output();

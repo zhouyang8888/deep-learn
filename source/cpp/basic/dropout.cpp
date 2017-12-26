@@ -34,7 +34,7 @@ dropout::~dropout()
 	delete mask;
 }
 
-void dropout::eval()
+void dropout::eval(const bool train)
 {
 	for (int i = 0; i < mask->get_row() * mask->get_col(); ++i) {
 		if (((float) rand()) / RAND_MAX < prob) {

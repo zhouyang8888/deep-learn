@@ -37,7 +37,7 @@ class prelu_layer : public net_layer {
 	public:
 		prelu_layer(matrix* x, matrix* y, matrix* dx, matrix* dy, float lambda=0.1f);
 		~prelu_layer();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		void stat(const char* str);
 		inline matrix*& get_y() { return y; }

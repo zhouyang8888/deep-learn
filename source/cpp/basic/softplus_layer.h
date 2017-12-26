@@ -34,7 +34,7 @@ class softplus_layer : public net_layer {
 	public:
 		softplus_layer(matrix* x, matrix* y, matrix* dx, matrix* dy);
 		~softplus_layer();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		void stat(const char* str);
 		inline matrix*& get_y() { return y; }

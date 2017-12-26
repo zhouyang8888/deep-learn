@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cassert>
 #include <iostream>
+#include <cstring>
 
 //////////////////sigmoid
 matrix& ele_op::sigmoid(matrix& mat)

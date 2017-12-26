@@ -34,7 +34,7 @@ class tanh_layer : public net_layer {
 	public:
 		tanh_layer(matrix* x, matrix* y, matrix* dx, matrix* dy);
 		~tanh_layer();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		void stat(const char* str);
 		inline matrix*& get_y() { return y; }

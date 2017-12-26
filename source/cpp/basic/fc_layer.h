@@ -56,7 +56,7 @@ class fc_layer : public net_layer {
 	public:
 		fc_layer(matrix* x, matrix* y, matrix* dx, matrix* dy, float lambda = 0.01f);
 		~fc_layer();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		inline void set_lambda(float val) { lambda = val; }
 		inline float get_lambda() { return lambda; }

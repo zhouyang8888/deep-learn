@@ -27,7 +27,7 @@
 #include <algorithm>
 
 #define LAMBDA 0.1
-#define LOOP 50
+#define LOOP 40
 
 mnist::mnist(const char* path_prefix) : train_image_file(path_prefix), train_label_file(path_prefix) 
 										, test_image_file(path_prefix), test_label_file(path_prefix)
@@ -277,29 +277,32 @@ void mnist::construct_net()
 	{
 		mnist_net->add_drop(0.95);
 
-		mnist_net->add_cnn(1, 28, 28, 100, 3, 3, LAMBDA);
-		mnist_net->add_relu(100 * 28 * 28);
-		mnist_net->add_mp(100, 28, 28, 2, 2);
+		mnist_net->add_cnn(1, 28, 28, 50, 3, 3, LAMBDA);
+		mnist_net->add_relu(50 * 28 * 28);
+		mnist_net->add_mp(50, 28, 28, 2, 2);
 
 		mnist_net->add_drop(0.8);
 
-		mnist_net->add_cnn(100, 14, 14, 10, 3, 3, LAMBDA);
+		mnist_net->add_cnn(50, 14, 14, 10, 3, 3, LAMBDA);
 		mnist_net->add_relu(10 * 14 * 14);
 
 		mnist_net->add_cnn(10, 14, 14, 50, 3, 3, LAMBDA);
 		mnist_net->add_relu(50 * 14 * 14);
-		// mnist_net->add_mp(50, 14, 14, 2, 2);
+		mnist_net->add_mp(50, 14, 14, 2, 2);
 
-		mnist_net->add_drop(0.9);
+		mnist_net->add_drop(0.8);
 		// 
-		// mnist_net->add_cnn(500, 7, 7, 1000, 3, 3, LAMBDA);
-		// mnist_net->add_relu(1000 * 7 * 7);
+		mnist_net->add_cnn(50, 7, 7, 10, 3, 3, LAMBDA);
+		mnist_net->add_relu(10 * 7 * 7);
 
-		// mnist_net->add_drop(0.5);
+		mnist_net->add_cnn(10, 7, 7, 50, 3, 3, LAMBDA);
+		mnist_net->add_relu(50 * 7 * 7);
+
+		mnist_net->add_drop(0.8);
 		// 
-		mnist_net->add_cnn(50, 14, 14, 10, 3, 3, LAMBDA);
-		mnist_net->add_relu(10 * 14 * 14);
-		mnist_net->add_mp(10, 14, 14, 2, 2);
+		mnist_net->add_cnn(50, 7, 7, 10, 3, 3, LAMBDA);
+		mnist_net->add_relu(10 * 7 * 7);
+		// mnist_net->add_mp(10, 14, 14, 2, 2);
 
 		// mnist_net->add_drop(0.5);
 		// 
@@ -328,8 +331,8 @@ void mnist::construct_net()
 	float tloss = 0;
 	int vaccu_down = 0;
 	float lambda = LAMBDA;
-	float target_lambda = lambda / 2;
-	int   decay_times = 10;
+	float target_lambda = lambda / 4;
+	int   decay_times = 20;
 	float delta_lambda = (lambda - target_lambda) / decay_times;
 	int   decay_interval = LOOP / 2 / decay_times;
 
@@ -563,7 +566,7 @@ void mnist::int_reverse(int& i)
 
 int main(int argc, char** argv)
 {
-	mnist m("/Users/zhouyang/ML/web-data/mnist-unzip/");
+	mnist m("~/data/web-data/mnist-unzip/");
 	m.load_data();
 	m.set_batch_size(250);
 	m.construct_net();

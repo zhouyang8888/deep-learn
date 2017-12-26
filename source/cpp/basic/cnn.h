@@ -69,7 +69,7 @@ class cnn : public net_layer {
 				, int nf, int fr, int fc
 				, int bz, float lambda=0.1f);
 		~cnn();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		void stat(const char* str);
 		inline matrix*& get_y() { return my; }

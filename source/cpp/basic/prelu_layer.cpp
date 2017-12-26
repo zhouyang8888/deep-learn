@@ -38,7 +38,7 @@ prelu_layer::~prelu_layer()
 	if (dp) delete dp;
 }
 
-void prelu_layer::eval()
+void prelu_layer::eval(const bool train)
 {
 	ele_op::prelu(&y, *x, *p);
 }

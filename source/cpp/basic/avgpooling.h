@@ -43,7 +43,7 @@ class avgpooling : public net_layer {
 		avgpooling(matrix* x, matrix* y, matrix* dx, matrix* dy
 				, int xd, int xr, int xc, int rstep, int cstep);
 		~avgpooling();
-		void eval();
+		void eval(const bool train);
 		void bp();
 		void stat(const char* str);
 		inline matrix*& get_y() { return y; }
