@@ -291,29 +291,15 @@ void mnist::construct_net()
 
 		mnist_net->add_cnn(10, 14, 14, 50, 3, 3, LAMBDA);
 		mnist_net->add_relu(50 * 14 * 14);
-		mnist_net->add_mp(50, 14, 14, 2, 2);
 
-		mnist_net->add_drop(0.8);
-		// 
-		mnist_net->add_cnn(50, 7, 7, 10, 3, 3, LAMBDA);
-		mnist_net->add_relu(10 * 7 * 7);
+		mnist_net->add_drop(0.9);
 
-		mnist_net->add_cnn(10, 7, 7, 50, 3, 3, LAMBDA);
-		mnist_net->add_relu(50 * 7 * 7);
+		mnist_net->add_cnn(50, 14, 14, 10, 3, 3, LAMBDA);
+		mnist_net->add_relu(10 * 14 * 14);
+		mnist_net->add_mp(10, 14, 14, 2, 2);
 
-		mnist_net->add_drop(0.8);
-		// 
-		mnist_net->add_cnn(50, 7, 7, 10, 3, 3, LAMBDA);
-		mnist_net->add_relu(10 * 7 * 7);
-		// mnist_net->add_mp(10, 14, 14, 2, 2);
-
-		// mnist_net->add_drop(0.5);
-		// 
 		mnist_net->add_cnn(10, 7, 7, 100, 3, 3, LAMBDA);
 		mnist_net->add_relu(100 * 7 * 7);
-
-		// mnist_net->add_cnn(10, 7, 7, 10, 5, 5, LAMBDA);
-		// mnist_net->add_relu(10 * 7 * 7);
 
 		mnist_net->add_fc(10, LAMBDA);
 		mnist_net->add_bn(10, LAMBDA);
@@ -334,8 +320,8 @@ void mnist::construct_net()
 	float tloss = 0;
 	int vaccu_down = 0;
 	float lambda = LAMBDA;
-	float target_lambda = lambda / 4;
-	int   decay_times = 20;
+	float target_lambda = lambda / 2;
+	int   decay_times = 10;
 	float delta_lambda = (lambda - target_lambda) / decay_times;
 	int   decay_interval = LOOP / 2 / decay_times;
 
@@ -375,10 +361,11 @@ void mnist::construct_net()
 		}
 	};
 
-	std::cout << "Batch normalization collapse into pre full connection layer." << std::endl;
-	mnist_net->bn_post_handle(train_image, train_label);
 	std::cout << "Remove drop out layers." << std::endl;
 	mnist_net->remove_drops();
+
+	std::cout << "Batch normalization collapse into pre full connection layer." << std::endl;
+	mnist_net->bn_post_handle(train_image, train_label);
 
 	std::cout << "Test set:" << std::endl;
 	mnist_net->noise = false; 
