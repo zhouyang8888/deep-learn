@@ -22,6 +22,8 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
 
 matrix::matrix(int row, int col) : row(row), col(col)
 {
@@ -177,28 +179,66 @@ matrix* matrix::minus(matrix** ret, const matrix& mat0, const matrix& mat1)
 	return *ret;
 }
 
+__global__
 matrix* matrix::multiply(matrix** ret, const matrix& mat0, const matrix& mat1)
 {
-	if (0 == *ret)
-		*ret = new matrix(mat0.row, mat1.col);
-	else {
-		assert((*ret)->row * (*ret)->col == mat0.row * mat1.col);
-		(*ret)->row = mat0.row;
-		(*ret)->col = mat1.col;
-	}
+    if (0 == *ret)
+        *ret = new matrix(mat0.row, mat1.col);
+    else {
+        assert((*ret)->row * (*ret)->col == mat0.row * mat1.col);
+        (*ret)->row = mat0.row;
+        (*ret)->col = mat1.col;
+    }
 
-	matrix* pmat = *ret;
+    matrix* pmat = *ret;
 
-	for (int i = 0; i < pmat->row; ++i)
-		for (int j = 0; j < pmat->col; ++j) {
-			float tmp = 0.0f;
-			for (int k = 0; k < mat0.col; ++k)
-				tmp += mat0.val[i * mat0.col + k] * mat1.val[k * mat1.col + j];
+    cublasStatus_t status;
+    cublasHandle_t handle;
+    status = cublasCreate(&handle);
 
-			pmat->val[i * pmat->col + j] = tmp;
-		}
+    if (CUBLAS_STATUS_SUCCESS != status) {
+        if (status == CUBLAS_STATUS_NOT_INITIALIZED) {
+            std::cout << "CUBLAS 初始化出错!" << std::endl;
+        }
+        cublasDestroy(handle);
 
-	return *ret;
+        // use cpu.
+        for (int i = 0; i < pmat->row; ++i) {
+            for (int j = 0; j < pmat->col; ++j) {
+                float tmp = 0.0f;
+                for (int k = 0; k < mat0.col; ++k)
+                    tmp += mat0.val[i * mat0.col + k] * mat1.val[k * mat1.col + j];
+
+                pmat->val[i * pmat->col + j] = tmp;
+            }
+        }
+    } else {
+        // gpu : cublas.
+        float *d_A, *d_B, *d_C;
+        cudaMalloc((void**)&d_A, sizeof(float) * mat0.get_row() * mat0.get_col());
+        cudaMalloc((void**)&d_B, sizeof(float) * mat1.get_row() * mat1.get_col());
+        cudaMalloc((void**)&d_C, sizeof(float) * mat0.get_row() * mat1.get_col());
+
+        cublasSetVector(mat0.get_row() * mat0.get_col(), sizeof(float), mat0.val, 1, d_A, 1);
+        cublasSetVector(mat1.get_row() * mat1.get_col(), sizeof(float), mat1.val, 1, d_B, 1);
+
+        cudaThreadSynchronize();
+
+        float a = 1.f;
+        float b = 0.f;
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, mat1.get_col(), mat0.get_row(), mat0.get_col(), &a, d_B, mat1.get_col(), d_A, mat0.get_col(), &b, d_C, mat1.get_col());
+        cudaThreadSynchronize();
+
+        cublasGetVector(mat0.get_row() * mat1.get_col(), sizeof(float), d_C, 1, pmat->val, 1);
+
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+
+        cublasDestroy(handle);
+    }
+
+    return *ret;
 }
 
 matrix& matrix::multiply_num(float coef)
