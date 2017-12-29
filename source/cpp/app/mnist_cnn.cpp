@@ -25,9 +25,12 @@
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 #define LAMBDA 0.1
-#define LOOP 50
+#define LOOP 40
 
 mnist::mnist(const char* path_prefix) : train_image_file(path_prefix), train_label_file(path_prefix) 
 										, test_image_file(path_prefix), test_label_file(path_prefix)
@@ -152,9 +155,9 @@ void mnist::construct_net()
 						{
 							if (j != targetj) {
 								if (output->get_val(i, j) >= targetv)
-									std::cout << color_macro::YELLOW << output->get_val(i, j) << " ";
+									std::cout << color_macro::WHITE << output->get_val(i, j) << " ";
 								else if (output->get_val(i, j) >= targetv - 0.2f)
-									std::cout << color_macro::MAGENTA << output->get_val(i, j) << " ";
+									std::cout << color_macro::BLUE << output->get_val(i, j) << " ";
 								else
 									std::cout << color_macro::GREEN << output->get_val(i, j) << " ";
 							}
@@ -289,26 +292,15 @@ void mnist::construct_net()
 
 		mnist_net->add_cnn(10, 14, 14, 50, 3, 3, LAMBDA);
 		mnist_net->add_relu(50 * 14 * 14);
-		// mnist_net->add_mp(50, 14, 14, 2, 2);
 
 		mnist_net->add_drop(0.9);
-		// 
-		// mnist_net->add_cnn(500, 7, 7, 1000, 3, 3, LAMBDA);
-		// mnist_net->add_relu(1000 * 7 * 7);
 
-		// mnist_net->add_drop(0.5);
-		// 
 		mnist_net->add_cnn(50, 14, 14, 10, 3, 3, LAMBDA);
 		mnist_net->add_relu(10 * 14 * 14);
 		mnist_net->add_mp(10, 14, 14, 2, 2);
 
-		// mnist_net->add_drop(0.5);
-		// 
 		mnist_net->add_cnn(10, 7, 7, 100, 3, 3, LAMBDA);
 		mnist_net->add_relu(100 * 7 * 7);
-
-		// mnist_net->add_cnn(10, 7, 7, 10, 5, 5, LAMBDA);
-		// mnist_net->add_relu(10 * 7 * 7);
 
 		mnist_net->add_fc(10, LAMBDA);
 		mnist_net->add_bn(10, LAMBDA);
@@ -370,10 +362,11 @@ void mnist::construct_net()
 		}
 	};
 
-	std::cout << "Batch normalization collapse into pre full connection layer." << std::endl;
-	mnist_net->bn_post_handle(train_image, train_label);
 	std::cout << "Remove drop out layers." << std::endl;
 	mnist_net->remove_drops();
+
+	std::cout << "Batch normalization collapse into pre full connection layer." << std::endl;
+	mnist_net->bn_post_handle(train_image, train_label);
 
 	std::cout << "Test set:" << std::endl;
 	mnist_net->noise = false; 
@@ -425,51 +418,40 @@ void mnist::load_data()
 	unsigned char* test_image_data = read_image_file(test_image_file, 10000, 0x00000803);
 	unsigned char* test_label_data = read_label_file(test_label_file, 10000, 0x00000801);
 
-	train_image = new matrix(55000, 28 * 28);
-	train_label= new matrix(55000, 10);
+    int train_size = 55000;
+    int valid_size = 60000 - train_size;
+    int test_size = 10000;
 
-	valid_image = new matrix(5000, 28 * 28);
-	valid_label = new matrix(5000, 10);
+	train_image = new matrix(train_size, 28 * 28);
+	train_label= new matrix(train_size, 10);
 
-	test_image = new matrix(10000, 28 * 28);
-	test_label = new matrix(10000, 10);
+	valid_image = new matrix(valid_size, 28 * 28);
+	valid_label = new matrix(valid_size, 10);
+
+	test_image = new matrix(test_size, 28 * 28);
+	test_label = new matrix(test_size, 10);
 
 	// train
-	for (int i = 0; i < 55000 * 28 * 28; ++i) {
+	for (int i = 0; i < train_size * 28 * 28; ++i) {
 		train_image->val[i] = (unsigned int)train_image_data[i];
 	}
-	/*  *
-	for (int i = 0; i < 55000; ++i) {
-		shrink_image(train_image_data + i * 28 * 28, train_image->val + i * 14 * 14);
-	}
-	*  */
-	for (int i = 0; i < 55000; ++i) {
+	for (int i = 0; i < train_size; ++i) {
 		train_label->val[i * 10 + (unsigned int)train_label_data[i]] = 1;
 	}
 
 	// validation
-	for (int i = 0; i < 5000 * 28 * 28; ++i) {
-		valid_image->val[i] = (unsigned int)train_image_data[i + 55000 * 28 * 28];
+	for (int i = 0; i < valid_size * 28 * 28; ++i) {
+		valid_image->val[i] = (unsigned int)train_image_data[i + train_size * 28 * 28];
 	}
-	/*  *
-	for (int i = 0; i < 5000; ++i) {
-		shrink_image(train_image_data + (55000 + i) * 28 * 28, valid_image->val + i * 14 * 14);
-	}
-	*  */
-	for (int i = 0; i < 5000; ++i) {
-		valid_label->val[i * 10 + (unsigned int)train_label_data[i + 55000]] = 1;
+	for (int i = 0; i < valid_size; ++i) {
+		valid_label->val[i * 10 + (unsigned int)train_label_data[i + train_size]] = 1;
 	}
 
 	// test
-	for (int i = 0; i < 10000 * 28 * 28; ++i) {
+	for (int i = 0; i < test_size * 28 * 28; ++i) {
 		test_image->val[i] = (unsigned int)test_image_data[i];
 	}
-	/*  *
-	for (int i = 0; i < 10000; ++i) {
-		shrink_image(test_image_data + i * 28 * 28, test_image->val + i * 14 * 14);
-	}
-	*  */
-	for (int i = 0; i < 10000; ++i) {
+	for (int i = 0; i < test_size; ++i) {
 		test_label->val[i * 10 + (unsigned int)test_label_data[i]] = 1;
 	}
 
@@ -562,9 +544,34 @@ void mnist::int_reverse(int& i)
 	p[2] = ch;
 }
 
+
+bool read_home_dir(std::string& home)
+{
+    const char* home_dir = NULL;
+    if (NULL == (home_dir = getenv("HOME"))) {
+        struct passwd* pw = getpwuid(getuid());
+        if (NULL != pw)
+            home_dir = pw->pw_dir;
+    }
+
+    if (home_dir) {
+        home.append(home_dir);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 int main(int argc, char** argv)
 {
-	mnist m("/Users/zhouyang/ML/web-data/mnist-unzip/");
+    std::string home;
+    if (!read_home_dir(home)) {
+        std::cerr << "Get home dir error." << std::endl;
+        exit(-1);
+    }
+    home.append("/data/web-data/mnist-unzip/");
+
+	mnist m(home.c_str());
 	m.load_data();
 	m.set_batch_size(250);
 	m.construct_net();

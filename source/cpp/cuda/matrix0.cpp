@@ -25,31 +25,44 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 
+__global__
 matrix::matrix(int row, int col) : row(row), col(col)
 {
-	val = (float*) malloc(sizeof(float) * row * col);
-	memset(val, 0, sizeof(float) * row * col);
+    cudaMalloc(&val, sizeof(float) * row * col);
+    cudaMemset(val, 0, sizeof(float) * row * col);
 }
 
+__global__
 matrix::matrix(const float* val, int row, int col) : row(row), col(col)
 {
-	this->val = (float*) malloc(sizeof(float) * row * col);
-	memcpy(this->val, val, sizeof(float) * row * col);
+    int len = row * col;
+    cudaMalloc(&this->val, sizeof(float) * len);
+    helper::copy_array(this->val, val,  len);
 }
 
+__global__
 matrix::matrix(const tensor** tensors, int row, int col) : row(row), col(col)
 {
-	this->val = (float*) malloc(sizeof(float) * row * col);
+    cudaMalloc(&this->val, sizeof(float) * row * col);
 	for (int i = 0; i < row; i++) {
-		memcpy(this->val + i * col, tensors[i]->get_val(), sizeof(float) * col);
+        cudaMemcpy(this->val, tensors[i]->get_val(), sizeof(float) * row * col, cudaMemcpyHostToDevice);
 	}
 }
 
+__global__
 matrix::matrix(const matrix& other) : row(other.row), col(other.col)
 {
 	const float* that_val = other.val;
-	this->val = (float*) malloc(sizeof(float) * row * col);
-	memcpy(this->val, that_val, sizeof(float) * row * col);
+    cudaMalloc(&this->val, sizeof(float) * row * col);
+    cudaMemcpy(this->val, that_val, sizeof(float) * row * col, cudaMemcpyHostToDevice);
+}
+
+__global__
+matrix::matrix(const matrix& other, bool in_device) : row(other.row), col(other.col)
+{
+	const float* that_val = other.val;
+    cudaMalloc(&this->val, sizeof(float) * row * col);
+    cudaMemcpy(this->val, that_val, sizeof(float) * row * col, cudaMemcpyHostToDevice);
 }
 
 matrix::~matrix()
@@ -192,18 +205,6 @@ matrix* matrix::multiply(matrix** ret, const matrix& mat0, const matrix& mat1)
 
     matrix* pmat = *ret;
 
-    // use cpu.
-    for (int i = 0; i < pmat->row; ++i) {
-        for (int j = 0; j < pmat->col; ++j) {
-            float tmp = 0.0f;
-            for (int k = 0; k < mat0.col; ++k)
-                tmp += mat0.val[i * mat0.col + k] * mat1.val[k * mat1.col + j];
-
-            pmat->val[i * pmat->col + j] = tmp;
-        }
-    }
-
-    /*
     cublasStatus_t status;
     cublasHandle_t handle;
     status = cublasCreate(&handle);
@@ -249,7 +250,6 @@ matrix* matrix::multiply(matrix** ret, const matrix& mat0, const matrix& mat1)
 
         cublasDestroy(handle);
     }
-    */
 
     return *ret;
 }
