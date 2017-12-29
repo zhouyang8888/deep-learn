@@ -179,7 +179,7 @@ matrix* matrix::minus(matrix** ret, const matrix& mat0, const matrix& mat1)
 	return *ret;
 }
 
-__global__
+// __global__
 matrix* matrix::multiply(matrix** ret, const matrix& mat0, const matrix& mat1)
 {
     if (0 == *ret)
@@ -192,6 +192,18 @@ matrix* matrix::multiply(matrix** ret, const matrix& mat0, const matrix& mat1)
 
     matrix* pmat = *ret;
 
+    // use cpu.
+    for (int i = 0; i < pmat->row; ++i) {
+        for (int j = 0; j < pmat->col; ++j) {
+            float tmp = 0.0f;
+            for (int k = 0; k < mat0.col; ++k)
+                tmp += mat0.val[i * mat0.col + k] * mat1.val[k * mat1.col + j];
+
+            pmat->val[i * pmat->col + j] = tmp;
+        }
+    }
+
+    /*
     cublasStatus_t status;
     cublasHandle_t handle;
     status = cublasCreate(&handle);
@@ -237,6 +249,7 @@ matrix* matrix::multiply(matrix** ret, const matrix& mat0, const matrix& mat1)
 
         cublasDestroy(handle);
     }
+    */
 
     return *ret;
 }
