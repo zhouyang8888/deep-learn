@@ -177,6 +177,7 @@ void mnist::construct_net()
 
 					} // end for image 
 					std::cout.unsetf(std::ios::left|std::ios::scientific|std::ios::showpos);
+					std::cout << std::setw(8) << std::setprecision(4);
 
 					std::cout << std::endl;
 					dloss_dy->set_val(i, targetj, sum / net::batch_size);

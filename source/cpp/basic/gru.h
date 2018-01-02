@@ -19,9 +19,8 @@
 #define __gru__
 
 #include "matrix0.h"
-#include "net_layer.h"
 
-class gru : net_layer {
+class gru {
 	public:
 		matrix* x;    // m
 		matrix* h1;   // n
@@ -74,7 +73,7 @@ class gru : net_layer {
 
 		matrix lambda;
 	public:
-		gru(matrix* x, matrix* ht_1, matrix* ht, int len, int xwidth, int hwidth, float lambda);
+		gru(matrix* x, matrix* ht_1, matrix* ht, int xwidth, int hwidth, float lambda);
 		~gru();
 
 		void eval();
