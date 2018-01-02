@@ -30,7 +30,7 @@
 #include <pwd.h>
 
 #define LAMBDA 0.1
-#define LOOP 40
+#define LOOP 80
 
 mnist::mnist(const char* path_prefix) : train_image_file(path_prefix), train_label_file(path_prefix) 
 										, test_image_file(path_prefix), test_label_file(path_prefix)
@@ -286,19 +286,17 @@ void mnist::construct_net()
 
 		mnist_net->add_drop(0.8);
 
-		mnist_net->add_cnn(100, 14, 14, 10, 3, 3, LAMBDA);
-		mnist_net->add_relu(10 * 14 * 14);
+		mnist_net->add_cnn(100, 14, 14, 20, 3, 3, LAMBDA);
+		mnist_net->add_relu(20 * 14 * 14);
 
-		mnist_net->add_cnn(10, 14, 14, 50, 3, 3, LAMBDA);
+		mnist_net->add_cnn(20, 14, 14, 50, 3, 3, LAMBDA);
 		mnist_net->add_relu(50 * 14 * 14);
+		mnist_net->add_mp(50, 14, 14, 2, 2);
 
-		mnist_net->add_drop(0.9);
+		mnist_net->add_cnn(50, 7, 7, 20, 3, 3, LAMBDA);
+		mnist_net->add_relu(20 * 7 * 7);
 
-		mnist_net->add_cnn(50, 14, 14, 10, 3, 3, LAMBDA);
-		mnist_net->add_relu(10 * 14 * 14);
-		mnist_net->add_mp(10, 14, 14, 2, 2);
-
-		mnist_net->add_cnn(10, 7, 7, 100, 3, 3, LAMBDA);
+		mnist_net->add_cnn(20, 7, 7, 100, 3, 3, LAMBDA);
 		mnist_net->add_relu(100 * 7 * 7);
 
 		mnist_net->add_fc(10, LAMBDA);
@@ -372,6 +370,34 @@ void mnist::construct_net()
 	mnist_net->eval(taccu, tloss, test_image, test_label);
 	std::cout << "acc: " << taccu * 100 << "%, " 
 		<< "loss: " << tloss << "." << std::endl;
+
+    while (true) {
+        std::cout << "Next op: \n\tA) eval train set, \n\tB) eval vaidationg set, \n\tC) eval test set, \n\tD) exit." << std::endl;
+        char s;
+        std::cin >> s;
+        bool print = true;
+        switch(s) {
+        case 'A':
+            mnist_net->eval(taccu, tloss, train_image, train_label);
+            break;
+        case 'B':
+            mnist_net->eval(taccu, tloss, valid_image, valid_label);
+            break;
+        case 'C':
+            mnist_net->eval(taccu, tloss, test_image, test_label);
+            break;
+        case 'D':
+            std::cout << "ByeBye" << std::endl;
+            exit(0);
+        default:
+            std::cout << "Selection INCORRECT." << std::endl;
+            print = false;
+        }
+        if (print) {
+            std::cout << "acc: " << taccu * 100 << "%, " 
+                << "loss: " << tloss << "." << std::endl;
+        }
+    }
 }
 
 // shrink image from 28 * 28 to 28 * 14 
@@ -417,7 +443,7 @@ void mnist::load_data()
 	unsigned char* test_image_data = read_image_file(test_image_file, 10000, 0x00000803);
 	unsigned char* test_label_data = read_label_file(test_label_file, 10000, 0x00000801);
 
-    int train_size = 55000;
+    int train_size = 59000;
     int valid_size = 60000 - train_size;
     int test_size = 10000;
 
