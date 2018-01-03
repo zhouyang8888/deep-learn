@@ -168,9 +168,9 @@ void mnist::construct_net()
 						if (j == targetj) continue;
 						float curv = output->get_val(i, j);
 
-						if (targetv - 0.5f < curv) {
-							dloss_dy->set_val(i, j, (curv - targetv + 0.5f) * 2 / net::batch_size);
-							sum += (targetv - curv - 0.5f) * 2;
+						if (targetv - 1.0f < curv) {
+							dloss_dy->set_val(i, j, (curv - targetv + 1.0f) * 1 / net::batch_size);
+							sum += (targetv - curv - 1.0f) * 1;
 						} else {
 							dloss_dy->set_val(i, j, 0);
 						}
@@ -293,6 +293,8 @@ void mnist::construct_net()
 		mnist_net->add_cnn(20, 14, 14, 50, 3, 3, LAMBDA);
 		mnist_net->add_relu(50 * 14 * 14);
 		mnist_net->add_mp(50, 14, 14, 2, 2);
+
+		mnist_net->add_drop(0.9);
 
 		mnist_net->add_cnn(50, 7, 7, 20, 3, 3, LAMBDA);
 		mnist_net->add_relu(20 * 7 * 7);
