@@ -16,28 +16,46 @@
  * =====================================================================================
  */
 
-#pragma once
+#ifndef __mem__
+#define __mem__
 #pragma pack(4)
 
 #include "hash.h"
+#include "jump_table.h"
+#include "mem_block.h"
 
 struct m_info {
 	void* p_h;
 	void* p_d;
 	int sz;
-
-	struct m_info* prev;
-	struct m_info* next;
 };
 
-struct d_global
+class addr_key : public hashkey {
+public:
+    void* p;
+    inline addr_key(void* p): p(p){}
+    inline uint64_t hash_code() {
+        return (uint64_t) p;
+    }
+    inline bool operator==(const hashkey& other) {
+        return p == other.p;
+    }
+};
+
 class mem {
 	public:
-		m_info* head;
-		inline m_info* alloc(int sz) {
-			p_h = malloc(sz);
-			assert(NULL != p_h);
-			cudaMalloc(&p_d, sz);
-		}
-		void dealloc(m_info* info);
+        hash<addr_key, void*> h2d(197);
+        hash<addr_key, void*> d2h(197);
+
+        jump_table dm;
+        jump_table df;
+        jump_table hm;
+        jump_table hf;
+
+        mem(int dsize, int hsize);
+        m_info* new_block(int size);
+        void free_block(m_info* info);
+        float* get(m_info* info);
 };
+
+#endif
