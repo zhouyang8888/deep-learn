@@ -280,6 +280,10 @@ void test_addr()
     t.insert(&b7);
     t.dump();
 
+    mem_block b8((void*)23, 65);
+    ret = t.find(b8);
+    assert(!ret);
+
     ret = t.find(b6);
     assert(ret);
     t.remove(b6);
@@ -357,6 +361,10 @@ void test_size()
     t.insert(&b7);
     t.dump();
 
+    mem_block2 b8((void*)23, 65);
+    ret = t.find(b8);
+    assert(!ret);
+   
     ret = t.find(b6);
     assert(ret);
     t.remove(b6);
