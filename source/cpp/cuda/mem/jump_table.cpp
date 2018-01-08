@@ -15,7 +15,7 @@ jump_table::~jump_table()
     reclaim(head->nxt);
     free(head);
 }
-jump_node* jump_table::find(const block& b)
+jump_node* jump_table::eq(const block& b)
 {
     jump_node* pb = new jump_node(&b);
     jump_node* ret = search(pb);
@@ -23,6 +23,52 @@ jump_node* jump_table::find(const block& b)
     if (ret == head || *ret->b < b) {
         return 0;
     } else {
+        return ret;
+    }
+}
+jump_node* jump_table::le(const block& b)
+{
+    jump_node* pb = new jump_node(&b);
+    jump_node* ret = search(pb);
+    delete pb;
+    if (ret == head) {
+        return 0;
+    } else {
+        return ret;
+    }
+}
+jump_node* jump_table::ge(const block& b)
+{
+    jump_node* pb = new jump_node(&b);
+    jump_node* ret = search(pb);
+    delete pb;
+    if (ret == head) {
+        if (ret->nxt) {
+            ret = ret->nxt;
+            while (ret->down)
+                ret = ret->down;
+            return ret;
+        } else {
+            return 0;
+        }
+    } else {
+        while (*ret->b < b) {
+            if (ret->nxt) ret = ret->nxt;
+            else {
+                while (ret->up) {
+                    ret = ret->up;
+                    if (ret->nxt) {
+                        ret = ret->nxt;
+                        while (ret->down)
+                            ret = ret->down;
+                        break;
+                    }
+                }
+                if (!ret->up) {
+                    return 0;
+                }
+            }
+        }
         return ret;
     }
 }
@@ -247,13 +293,13 @@ void test_addr()
 
     mem_block b((void*)11, 77);
 
-    jump_node* ret = t.find(b);
+    jump_node* ret = t.eq(b);
     assert(!ret);
 
     t.insert(&b);
     t.dump();
 
-    ret = t.find(b);
+    ret = t.eq(b);
     assert(ret);
 
     mem_block b2((void*)22, 66);
@@ -281,41 +327,41 @@ void test_addr()
     t.dump();
 
     mem_block b8((void*)23, 65);
-    ret = t.find(b8);
+    ret = t.eq(b8);
     assert(!ret);
 
-    ret = t.find(b6);
+    ret = t.eq(b6);
     assert(ret);
     t.remove(b6);
     t.dump();
 
-    ret = t.find(b7);
+    ret = t.eq(b7);
     assert(ret);
     t.remove(b7);
     t.dump();
 
 
-    ret = t.find(b5);
+    ret = t.eq(b5);
     assert(ret);
     t.remove(b5);
     t.dump();
 
-    ret = t.find(b4);
+    ret = t.eq(b4);
     assert(ret);
     t.remove(b4);
     t.dump();
 
-    ret = t.find(b3);
+    ret = t.eq(b3);
     assert(ret);
     t.remove(b3);
     t.dump();
 
-    ret = t.find(b);
+    ret = t.eq(b);
     assert(ret);
     t.remove(b);
     t.dump();
 
-    ret = t.find(b2);
+    ret = t.eq(b2);
     assert(ret);
     t.remove(b2);
     t.dump();
@@ -328,13 +374,13 @@ void test_size()
 
     mem_block2 b((void*)11, 77);
 
-    jump_node* ret = t.find(b);
+    jump_node* ret = t.eq(b);
     assert(!ret);
 
     t.insert(&b);
     t.dump();
 
-    ret = t.find(b);
+    ret = t.eq(b);
     assert(ret);
 
     mem_block2 b2((void*)22, 66);
@@ -362,45 +408,59 @@ void test_size()
     t.dump();
 
     mem_block2 b8((void*)23, 65);
-    ret = t.find(b8);
+    ret = t.eq(b8);
     assert(!ret);
    
-    ret = t.find(b6);
+    ////////////////////////////////
+    mem_block2 blocks[] = {{(void*)40, 39}, {(void*)55, 33}, {(void*)0, 99}, {(void*)0, 88}, {(void*)40, 0}};
+    for (int i = 0; i < sizeof(blocks) / sizeof(mem_block2); ++i) {
+        ret = t.ge(blocks[i]);
+        std::cout << "ge:" << std::endl;
+        blocks[i].dump();
+        std::cout << " => ";
+        if (ret)
+            ret->b->dump();
+        else
+            std::cout << ret;
+        std::cout << std::endl;
+    }
+    ////////////////////////////////
+
+    ret = t.eq(b6);
     assert(ret);
     t.remove(b6);
     t.dump();
 
-    ret = t.find(b7);
+    ret = t.eq(b7);
     assert(ret);
     t.remove(b7);
     t.dump();
 
 
-    ret = t.find(b5);
+    ret = t.eq(b5);
     assert(ret);
     t.remove(b5);
     t.dump();
 
-    ret = t.find(b4);
+    ret = t.eq(b4);
     assert(ret);
     t.remove(b4);
     t.dump();
 
-    ret = t.find(b3);
+    ret = t.eq(b3);
     assert(ret);
     t.remove(b3);
     t.dump();
 
-    ret = t.find(b);
+    ret = t.eq(b);
     assert(ret);
     t.remove(b);
     t.dump();
 
-    ret = t.find(b2);
+    ret = t.eq(b2);
     assert(ret);
     t.remove(b2);
     t.dump();
-
 }
 
 int main(int argc, char** argv)

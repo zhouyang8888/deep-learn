@@ -49,15 +49,15 @@ struct mem_block2 : public mem_block {
     inline mem_block2(void* start, uint64_t len) : mem_block(start, len) {}
     inline mem_block2(const mem_block2& b) : mem_block(b) {}
     inline bool operator<(const block& t) const {
-        const mem_block& o = dynamic_cast<const mem_block&>(t);
+        const mem_block2& o = dynamic_cast<const mem_block2&>(t);
         return len < o.len || len == o.len && (uint64_t) start < (uint64_t) o.start;
     }
     inline bool operator<=(const block& t) const {
-        const mem_block& o = dynamic_cast<const mem_block&>(t);
+        const mem_block2& o = dynamic_cast<const mem_block2&>(t);
         return len < o.len || len == o.len && (uint64_t) start <= (uint64_t) o.start;
     }
     inline bool operator==(const block& t) const {
-        const mem_block& o = dynamic_cast<const mem_block&>(t);
+        const mem_block2& o = dynamic_cast<const mem_block2&>(t);
         return len == o.len && (uint64_t) start == (uint64_t) o.start;
     }
 };

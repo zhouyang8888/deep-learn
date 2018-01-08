@@ -24,7 +24,9 @@ public:
 public:
     jump_table(int stride=5);
     ~jump_table();
-    jump_node* find(const block& b);
+    jump_node* eq(const block& b);
+    jump_node* le(const block& b);
+    jump_node* ge(const block& b);
     void insert(const block* pb);
     const block* remove(const block& pb);
 
