@@ -29,6 +29,7 @@ public:
     jump_node* ge(const block& b);
     void insert(const block* pb);
     const block* remove(const block& pb);
+    inline const block* remove(jump_node* toremovenode) { return physically_remove(toremovenode); }
 
     void dump();
 
