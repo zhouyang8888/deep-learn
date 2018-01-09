@@ -159,6 +159,15 @@ void jump_table::insert(const block* pb)
         itr->sub_cnt++;
         if (itr->sub_cnt > stride) {
             split(itr);
+
+            jump_node* left = merge(itr);
+            if (left) {
+                delete_node(left);
+            }
+            jump_node* right = merge(itr->nxt);
+            if (right) {
+                delete_node(right);
+            }
             itr = itr->up;
         } else {
             break;
@@ -181,6 +190,11 @@ void jump_table::insert(const block* pb)
                 p = p->nxt;
             }
             split(head->nxt);
+
+            jump_node* right = merge(head->nxt->nxt);
+            if (right) {
+                delete_node(right);
+            }
         }
     }
 }
