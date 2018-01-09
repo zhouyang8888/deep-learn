@@ -43,34 +43,64 @@ jump_node* jump_table::ge(const block& b)
     jump_node* ret = search(pb);
     delete pb;
     if (ret == head) {
-        if (ret->nxt) {
-            ret = ret->nxt;
-            while (ret->down)
-                ret = ret->down;
-            return ret;
-        } else {
-            return 0;
-        }
+        return first();
     } else {
-        while (*ret->b < b) {
-            if (ret->nxt) ret = ret->nxt;
-            else {
-                while (ret->up) {
-                    ret = ret->up;
-                    if (ret->nxt) {
-                        ret = ret->nxt;
-                        while (ret->down)
-                            ret = ret->down;
-                        break;
-                    }
-                }
-                if (!ret->up) {
-                    return 0;
-                }
-            }
+        while (ret && *ret->b < b) {
+            ret = next(ret);
         }
         return ret;
     }
+}
+jump_node* jump_table::first()
+{
+    jump_node* cur = head->nxt;
+    if (!cur) return 0;
+
+    while (cur->down) cur = cur->down;
+    return cur;
+}
+jump_node* jump_table::next(jump_node* cur)
+{
+    if (cur->nxt) return cur->nxt;
+
+    while (cur->up) {
+        cur = cur->up;
+        if (cur->nxt) {
+            cur = cur->nxt;
+            while (cur->down)
+                cur = cur->down;
+            return cur;
+        }
+    }
+    return 0;
+}
+jump_node* jump_table::last()
+{
+    jump_node* cur = head;
+LOOP:
+    while (cur->nxt) cur = cur->nxt;
+    if (cur->down) {
+        cur = cur->down;
+        goto LOOP;
+    }
+
+    if (cur != head) return cur;
+    else return 0;
+}
+jump_node* jump_table::prev(jump_node* cur)
+{
+    if (cur->prv && cur->prv != head) return cur->prv;
+
+    while (cur->up) {
+        cur = cur->up;
+        if (cur->prv && cur->prv != head) {
+            cur = cur->prv;
+            while (cur->down) cur = cur->down;
+            while (cur->nxt) cur = cur->nxt;
+            return cur;
+        }
+    }
+    return 0;
 }
 jump_node* jump_table::search(const jump_node* node)
 {
@@ -462,11 +492,130 @@ void test_size()
     t.remove(b2);
     t.dump();
 }
+void print_tranverse(jump_table& t)
+{
+    std::cout << "Forward: " << std::endl;
+    jump_node* itr = t.first();
+    int i = 0;
+    while (itr) {
+        itr->b->dump();
+        itr = t.next(itr);
+        std::cout << " -> ";
+        if (!(++i % 5)) std::cout << std::endl;
+    }
+    std::cout << std::endl;
 
+    std::cout << "Backward: " << std::endl;
+    itr = t.last();
+    i = 0;
+    while (itr) {
+        itr->b->dump();
+        itr = t.prev(itr);
+        std::cout << " -> ";
+        if (!(++i % 5)) std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+void test_tranverse()
+{
+    jump_table t;
+
+    mem_block b((void*)11, 77);
+
+    jump_node* ret = t.eq(b);
+    assert(!ret);
+    print_tranverse(t);
+
+    t.insert(&b);
+    t.dump();
+    print_tranverse(t);
+
+    ret = t.eq(b);
+    assert(ret);
+
+    mem_block b2((void*)22, 66);
+    t.insert(&b2);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block b3((void*)33, 55);
+    t.insert(&b3);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block b4((void*)44, 44);
+    t.insert(&b4);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block b5((void*)55, 33);
+    t.insert(&b5);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block b6((void*)0, 88);
+    t.insert(&b6);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block b7((void*)40, 48);
+    t.insert(&b7);
+    t.dump();
+    print_tranverse(t);
+}
+void test_tranverse2()
+{
+    jump_table t;
+
+    mem_block2 b((void*)11, 77);
+
+    jump_node* ret = t.eq(b);
+    assert(!ret);
+    print_tranverse(t);
+
+    t.insert(&b);
+    t.dump();
+    print_tranverse(t);
+
+    ret = t.eq(b);
+    assert(ret);
+
+    mem_block2 b2((void*)22, 66);
+    t.insert(&b2);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block2 b3((void*)33, 55);
+    t.insert(&b3);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block2 b4((void*)44, 44);
+    t.insert(&b4);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block2 b5((void*)55, 33);
+    t.insert(&b5);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block2 b6((void*)0, 88);
+    t.insert(&b6);
+    t.dump();
+    print_tranverse(t);
+
+    mem_block2 b7((void*)40, 48);
+    t.insert(&b7);
+    t.dump();
+    print_tranverse(t);
+}
 int main(int argc, char** argv)
 {
     test_addr();
     test_size();
+    test_tranverse();
+    test_tranverse2();
 }
 
 #endif
