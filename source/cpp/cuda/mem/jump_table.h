@@ -33,18 +33,18 @@ public:
     jump_node* prev(jump_node*);
     void insert(const block* pb);
     const block* remove(const block& pb);
-    inline const block* remove(jump_node* toremovenode) { return physically_remove(toremovenode); }
+    const block* remove(jump_node* toremovenode);
 
     void dump();
 
 private:
     jump_node* search(const jump_node* node);
     void split(jump_node* node);
-    const block* physically_remove(jump_node* node);
     jump_node* merge(jump_node* node);
 
     void reclaim(jump_node* node);
     void dump(const jump_node* node, int level);
+    void delete_node(jump_node* node);
 private:
     jump_node* head;
 };

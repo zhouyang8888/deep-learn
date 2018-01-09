@@ -4,6 +4,7 @@
 
 jump_table::jump_table(int stride) : stride(stride)
 {
+    assert(stride > 1);
     head = (jump_node*) malloc(sizeof(jump_node));
     head->prv = 0;
     head->nxt = 0;
@@ -95,8 +96,11 @@ jump_node* jump_table::prev(jump_node* cur)
         cur = cur->up;
         if (cur->prv && cur->prv != head) {
             cur = cur->prv;
-            while (cur->down) cur = cur->down;
-            while (cur->nxt) cur = cur->nxt;
+            while (cur->down) {
+                cur = cur->down;
+                while (cur->nxt) cur = cur->nxt;
+            };
+            
             return cur;
         }
     }
@@ -120,15 +124,35 @@ void jump_table::insert(const block* pb)
 {
     jump_node* node = new jump_node(pb);
     jump_node* itr = search(node);
+    if (itr == head) {
+        jump_node* f = first();
+        if (f) {
+            f->prv = node;
+            node->nxt = f;
 
-    node->prv = itr;
-    node->nxt = itr->nxt;
-    node->up = itr->up;
-    node->down = 0;
-    node->sub_cnt = 0;
+            if (head->nxt == f) head->nxt = node;
+            else {
+                    node->up = f->up;
+                    f->up->down = node;
+                    do {
+                        f = f->up;
+                        f->b = node->b;
+                    } while (f->up);
+            }
+        } else {
+            head->nxt = node;
+            node->prv = head;
+        }
+    } else {
+        node->prv = itr;
+        node->nxt = itr->nxt;
+        node->up = itr->up;
+        node->down = 0;
+        node->sub_cnt = 0;
 
-    itr->nxt = node;
-    if (node->nxt) node->nxt->prv = node;
+        itr->nxt = node;
+        if (node->nxt) node->nxt->prv = node;
+    }
 
     itr = node->up;
     while (itr) {
@@ -166,11 +190,12 @@ void jump_table::insert(const block* pb)
 void jump_table::split(jump_node* node)
 {
     jump_node* itr = node->down;
-    int half_size = node->sub_cnt >> 1;
+    int half_size = (node->sub_cnt + 1) >> 1;
 
-    while (half_size-- > 0) itr = itr->nxt;
+    for (int i = 0; i < half_size; ++i)
+        itr = itr->nxt;
 
-    jump_node* newnode = new jump_node(itr->b, node, node->nxt, node->up, itr, node->sub_cnt - (node->sub_cnt >> 1));  //copy load;
+    jump_node* newnode = new jump_node(itr->b, node, node->nxt, node->up, itr, node->sub_cnt - half_size);  //copy load;
     node->nxt = newnode;
     if (newnode->nxt) newnode->nxt->prv = newnode;
     itr->prv->nxt = 0;
@@ -181,56 +206,57 @@ void jump_table::split(jump_node* node)
         itr = itr->nxt;
     }
 
-    node->sub_cnt >>= 1;
+    node->sub_cnt = half_size;
+}
+void jump_table::delete_node(jump_node* node)
+{
+    if (node) {
+        if (node->prv) node->prv->nxt = node->nxt;
+        if (node->nxt) node->nxt->prv = node->prv;
+        jump_node* pp = node->up;
+        if (pp) {
+            if (pp->down == node) {
+                pp->down = node->nxt;
+                if (pp->down) {
+                    jump_node* tmppp = pp;
+                    do {
+                        tmppp->b = tmppp->down->b;
+                        tmppp = tmppp->up;
+                    } while (tmppp && tmppp->b != tmppp->down->b);
+                }
+            }
+            pp->sub_cnt--;
+        }
+        delete node;
+    }
 }
 const block* jump_table::remove(const block& b)
 {
     const block* ret = 0;
     jump_node* node = new jump_node(&b);
 
-    jump_node* last_node = search(node);
-    if (last_node != head && b == *last_node->b) {
-        ret = physically_remove(last_node);
-    }
-
+    jump_node* toremovenode = search(node);
     delete node;
-    return ret;
+
+    if (toremovenode != head && b == *toremovenode->b) {
+        return remove(toremovenode);
+    }
+    return 0;
 }
-const block* jump_table::physically_remove(jump_node* node)
-{
-    const block* ret = node->b;
+const block* jump_table::remove(jump_node* toremovenode) 
+{ 
+    const block* ret = toremovenode->b;
+    jump_node* pp = 0;
+    do {
+        pp = toremovenode->up;
+        delete_node(toremovenode);
 
-    if (node->prv) node->prv->nxt = node->nxt;
-    if (node->nxt) node->nxt->prv = node->prv;
-
-    jump_node* pp = node->up;
-    while (pp) {
-        pp->sub_cnt--;
-        if (pp->down == node) {
-            pp->down = node->nxt;
-            if (pp->down) pp->b = pp->down->b;
-        }
-        if (pp->sub_cnt > 0) {
-            jump_node* toremove = merge(pp);
-            if (toremove) {
-                pp = toremove->up;
-                delete toremove;
-            } else {
-                break;
-            }
-        } else {
-            delete node;
-            node = pp;
-            pp = node->up;
-
-            if (node->prv) node->prv->nxt = node->nxt;
-            if (node->nxt) node->nxt->prv = node->prv;
-        }
-    }
-    delete node;
+        if (!pp) break;
+        if (0 == pp->sub_cnt) toremovenode = pp;
+        else toremovenode = merge(pp);
+    } while (toremovenode);
 
     if (!pp) {
-        // merege happend at upmost level.
         if (head->nxt && !head->nxt->nxt && head->nxt->down) {
             jump_node* nxt = head->nxt;
 
@@ -246,11 +272,12 @@ const block* jump_table::physically_remove(jump_node* node)
 
         }
     }
-
     return ret;
 }
 jump_node* jump_table::merge(jump_node* node)
 {
+    if (!node) return 0;
+
     jump_node *first = 0;
     jump_node *second = 0;
     if (node->prv && node->prv != head && node->prv->sub_cnt + node->sub_cnt <= stride) {
@@ -274,6 +301,8 @@ jump_node* jump_table::merge(jump_node* node)
 
         first->nxt = second->nxt;
         if (second->nxt) second->nxt->prv = first;
+
+        first->sub_cnt += second->sub_cnt;
 
         return second;
     } else {
@@ -302,7 +331,7 @@ void jump_table::dump(const jump_node* node, int level)
     while (node) {
         for (int i = 0; i < level; ++i) std::cout << "\t";
         node->b->dump();
-        std::cout << std::endl;
+        std::cout << node->sub_cnt << ";" << std::endl;
         if (node->down) {
             dump(node->down, level + 1);
         }
@@ -319,7 +348,7 @@ void jump_table::dump(const jump_node* node, int level)
 
 void test_addr()
 {
-    jump_table t;
+    jump_table t(2);
 
     mem_block b((void*)11, 77);
 
@@ -400,7 +429,7 @@ void test_addr()
 
 void test_size()
 {
-    jump_table t;
+    jump_table t(2);
 
     mem_block2 b((void*)11, 77);
 
@@ -518,7 +547,7 @@ void print_tranverse(jump_table& t)
 }
 void test_tranverse()
 {
-    jump_table t;
+    jump_table t(2);
 
     mem_block b((void*)11, 77);
 
@@ -565,7 +594,7 @@ void test_tranverse()
 }
 void test_tranverse2()
 {
-    jump_table t;
+    jump_table t(2);
 
     mem_block2 b((void*)11, 77);
 
