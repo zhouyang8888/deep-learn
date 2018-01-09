@@ -44,18 +44,27 @@ public:
 
 class mem {
 	public:
-        hash<addr_key, void*> h2d(197);
-        hash<addr_key, void*> d2h(197);
+        hash<addr_key, m_info*> hp2info(197);
+        hash<addr_key, m_info*> dp2info(197);
 
-        jump_table dm;
-        jump_table df;
-        jump_table hm;
-        jump_table hf;
+        jump_table tables[2][2][2];
 
         mem(int dsize, int hsize);
         m_info* new_block(int size);
         void free_block(m_info* info);
-        float* get(m_info* info);
+        void* get(m_info* info);
+
+
+        inline int align(int size) { return ((size + 3) >> 2) << 2; }
+        void free_block(jump_table& malloced, jump_table& freed, void* p, int size);
+        void free_block(m_info* info);
+    private:
+        static const int DEVICE;
+        static const int HOST;
+        static const int MALLOC;
+        static const int FREE;
+        static const int ADDR;
+        static const int SIZE;
 };
 
 #endif

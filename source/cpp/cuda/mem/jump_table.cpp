@@ -2,6 +2,10 @@
 #include <malloc.h>
 #include <cassert>
 
+jump_table::jump_table() : jump_table(5)
+{
+
+}
 jump_table::jump_table(int stride) : stride(stride)
 {
     assert(stride > 1);

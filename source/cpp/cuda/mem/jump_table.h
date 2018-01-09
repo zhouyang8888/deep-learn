@@ -22,7 +22,8 @@ class jump_table
 public:
     int stride;
 public:
-    jump_table(int stride=5);
+    jump_table();
+    jump_table(int stride);
     ~jump_table();
     jump_node* eq(const block& b);
     jump_node* le(const block& b);
