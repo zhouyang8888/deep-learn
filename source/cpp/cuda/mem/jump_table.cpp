@@ -362,7 +362,7 @@ void jump_table::dump(const jump_node* node, int level)
 
 void test_addr()
 {
-    jump_table t(2);
+    jump_table t(3);
 
     mem_block b((void*)11, 77);
 
@@ -443,7 +443,7 @@ void test_addr()
 
 void test_size()
 {
-    jump_table t(2);
+    jump_table t(3);
 
     mem_block2 b((void*)11, 77);
 
@@ -470,6 +470,42 @@ void test_size()
 
     mem_block2 b5((void*)55, 33);
     t.insert(&b5);
+    t.dump();
+
+    mem_block2 be1((void*)55, 32);
+    t.insert(&be1);
+    t.dump();
+
+
+    mem_block2 be2((void*)55, 31);
+    t.insert(&be2);
+    t.dump();
+
+    mem_block2 be3((void*)55, 30);
+    t.insert(&be3);
+    t.dump();
+
+
+    mem_block2 be4((void*)55, 29);
+    t.insert(&be4);
+    t.dump();
+
+    mem_block2 be5((void*)55, 28);
+    t.insert(&be5);
+    t.dump();
+
+
+    mem_block2 be6((void*)55, 27);
+    t.insert(&be6);
+    t.dump();
+
+    mem_block2 be7((void*)55, 26);
+    t.insert(&be7);
+    t.dump();
+
+
+    mem_block2 be8((void*)55, 25);
+    t.insert(&be8);
     t.dump();
 
     mem_block2 b6((void*)0, 88);
@@ -561,7 +597,7 @@ void print_tranverse(jump_table& t)
 }
 void test_tranverse()
 {
-    jump_table t(2);
+    jump_table t(3);
 
     mem_block b((void*)11, 77);
 
