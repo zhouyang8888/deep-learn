@@ -20,7 +20,7 @@ jump_table::~jump_table()
     reclaim(head->nxt);
     free(head);
 }
-jump_node* jump_table::eq(const block& b)
+jump_node* jump_table::eq(block& b)
 {
     jump_node* pb = new jump_node(&b);
     jump_node* ret = search(pb);
@@ -31,7 +31,7 @@ jump_node* jump_table::eq(const block& b)
         return ret;
     }
 }
-jump_node* jump_table::le(const block& b)
+jump_node* jump_table::le(block& b)
 {
     jump_node* pb = new jump_node(&b);
     jump_node* ret = search(pb);
@@ -42,7 +42,7 @@ jump_node* jump_table::le(const block& b)
         return ret;
     }
 }
-jump_node* jump_table::ge(const block& b)
+jump_node* jump_table::ge(block& b)
 {
     jump_node* pb = new jump_node(&b);
     jump_node* ret = search(pb);
@@ -110,7 +110,7 @@ jump_node* jump_table::prev(jump_node* cur)
     }
     return 0;
 }
-jump_node* jump_table::search(const jump_node* node)
+jump_node* jump_table::search(jump_node* node)
 {
     jump_node* itr = head;
     while (true) {
@@ -124,7 +124,7 @@ jump_node* jump_table::search(const jump_node* node)
         }
     }
 }
-void jump_table::insert(const block* pb)
+void jump_table::insert(block* pb)
 {
     jump_node* node = new jump_node(pb);
     jump_node* itr = search(node);
@@ -248,9 +248,9 @@ void jump_table::delete_node(jump_node* node)
         delete node;
     }
 }
-const block* jump_table::remove(const block& b)
+block* jump_table::remove(block& b)
 {
-    const block* ret = 0;
+    block* ret = 0;
     jump_node* node = new jump_node(&b);
 
     jump_node* toremovenode = search(node);
@@ -261,9 +261,9 @@ const block* jump_table::remove(const block& b)
     }
     return 0;
 }
-const block* jump_table::remove(jump_node* toremovenode) 
+block* jump_table::remove(jump_node* toremovenode) 
 { 
-    const block* ret = toremovenode->b;
+    block* ret = toremovenode->b;
     jump_node* pp = 0;
     do {
         pp = toremovenode->up;

@@ -30,22 +30,23 @@ struct m_info {
 	int sz;
 };
 
-class addr_key : public hashkey {
+class addr_key : public hash_key {
 public:
     void* p;
     inline addr_key(void* p): p(p){}
-    inline uint64_t hash_code() {
-        return (uint64_t) p;
+    inline uint64_t hash_code() const {
+        return (uint64_t) p >> 2;
     }
-    inline bool operator==(const hashkey& other) {
-        return p == other.p;
+    inline bool operator==(const hash_key& other) const {
+        const addr_key& o = dynamic_cast<const addr_key&>(other);
+        return p == o.p;
     }
 };
 
 class mem {
 	public:
-        hash<addr_key, m_info*> hp2info(197);
-        hash<addr_key, m_info*> dp2info(197);
+        hash<addr_key, m_info*> hp2info;
+        hash<addr_key, m_info*> dp2info;
 
         jump_table tables[2][2][2];
 
@@ -56,8 +57,8 @@ class mem {
 
 
         inline int align(int size) { return ((size + 3) >> 2) << 2; }
-        void free_block(jump_table& malloced, jump_table& freed, void* p, int size);
-        void free_block(m_info* info);
+        const m_info* get_device_addr_info(void* addr);
+        const m_info* get_host_addr_info(void* addr);
     private:
         static const int DEVICE;
         static const int HOST;
@@ -65,6 +66,10 @@ class mem {
         static const int FREE;
         static const int ADDR;
         static const int SIZE;
+    private:
+        void free_block(jump_table& malloced_p, jump_table& malloced_s, 
+                        jump_table& freed_p, jump_table& freed_s, 
+                        void* p, int size);
 };
 
 #endif

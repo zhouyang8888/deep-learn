@@ -62,7 +62,7 @@ class hash {
 		}
 
 	public:
-		inline const value * get(const hashkey& key) const {
+		inline const value* get(const hashkey& key) const {
 			int o = offset(key);
 			node<hashkey, value>* pp = table[o];
 			while (pp) {
