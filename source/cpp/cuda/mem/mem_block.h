@@ -3,9 +3,12 @@
 
 #include "block.h"
 #include <cassert>
+#include <cstdio>
+#include <cstdint>
 
-struct mem_block : public block 
+class mem_block : public block 
 {
+public:
     void* start;
     uint64_t len;
 
@@ -30,7 +33,7 @@ struct mem_block : public block
         len += nxt.len;
     }
 
-    inline mem_block get(int len) {
+    inline mem_block get(uint64_t len) {
         mem_block b(start, len);
 
         start = (void*)((uint64_t) start + len);
@@ -39,13 +42,15 @@ struct mem_block : public block
         return b;
     }
 
-    inline const void dump() const {
-        std::cout << "(" << std::hex << (uint64_t)start << ", " << std::dec << len << ")";
+    inline void dump() {
+        printf("(%lx, %lx)", (uint64_t)(start), (uint64_t)(len));
     }
 
 };
 
-struct mem_block2 : public mem_block {
+class mem_block2 : public mem_block 
+{
+public:
     inline mem_block2(void* start, uint64_t len) : mem_block(start, len) {}
     inline mem_block2(const mem_block2& b) : mem_block(b) {}
     inline bool operator<(const block& t) const {

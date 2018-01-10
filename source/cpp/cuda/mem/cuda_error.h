@@ -3,13 +3,13 @@
 #define __cuda_error___
 
 #include "cuda_runtime.h"
-#include <iostream>
+#include <cstdio>
 
 static void handle_cuda_error(cudaError_t err, const char* file, int line)
 {
     if (cudaSuccess != err) {
-        std::cerr << "In file " << file << ", line " << line << "failed." << std::endl;
-        std::cerr << "Err message : " << cudaGetErrorString(err) << std::endl;
+        printf("In file %s, line %d failed.\n", file, line);
+        printf("Err message: %s\n", cudaGetErrorString(err));
         exit(-1);
     }
 }

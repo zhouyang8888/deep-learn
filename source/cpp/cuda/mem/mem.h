@@ -18,11 +18,11 @@
 
 #ifndef __mem__
 #define __mem__
-#pragma pack(4)
 
 #include "hash.h"
 #include "jump_table.h"
 #include "mem_block.h"
+#include <cstdint>
 
 struct m_info {
 	void* p_h;

@@ -1,13 +1,13 @@
 #ifndef __jump_table__
 #define __jump_table__
 
-#include <iostream>
 #include <cstdint>
 #include <cassert>
 #include "block.h"
 
-struct jump_node 
+class jump_node 
 {
+public:
     block* b;
 
     jump_node *prv, *nxt, *up, *down;
@@ -46,7 +46,8 @@ private:
     void reclaim(jump_node* node);
     void dump(const jump_node* node, int level);
     void delete_node(jump_node* node);
-private:
+// private:
+public:
     jump_node* head;
 };
 
