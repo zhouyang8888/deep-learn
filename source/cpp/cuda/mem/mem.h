@@ -48,7 +48,7 @@ class mem {
         hash<addr_key, m_info*> hp2info;
         hash<addr_key, m_info*> dp2info;
 
-        jump_table tables[2][2][2];
+        jump_table* tables[2][2][2];
 
         mem(int dsize, int hsize);
         m_info* new_block(int size);
@@ -67,8 +67,8 @@ class mem {
         static const int ADDR;
         static const int SIZE;
     private:
-        void free_block(jump_table& malloced_p, jump_table& malloced_s, 
-                        jump_table& freed_p, jump_table& freed_s, 
+        void free_block(jump_table* malloced_p, jump_table* malloced_s, 
+                        jump_table* freed_p, jump_table* freed_s, 
                         void* p, int size);
 };
 

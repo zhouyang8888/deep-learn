@@ -1,7 +1,7 @@
 #include "jump_table.h"
 #include "cuda_error.h"
 #include <cassert>
-#include <iostream>
+#include <cstdio>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
@@ -13,8 +13,7 @@ jump_table::jump_table()
     head->nxt = 0;
     head->up = 0;
     head->down = 0;
-    std::cerr << "this:" << this << ", head:" << head 
-        << ", " << sizeof(head) << std::endl;
+    printf("this: %lx, head: %lx, size:%ld\n", (uint64_t)this, (uint64_t)head, sizeof(head));
 }
 jump_table::jump_table(int stride) : stride(stride)
 {
@@ -24,8 +23,7 @@ jump_table::jump_table(int stride) : stride(stride)
     head->nxt = 0;
     head->up = 0;
     head->down = 0;
-    std::cerr << "this:" << this << ", head:" << head 
-        << ", " << sizeof(head) << std::endl;
+    printf("this: %lx, head: %lx, size:%ld\n", (uint64_t)this, (uint64_t)head, sizeof(head));
 }
 jump_table::~jump_table()
 {
@@ -352,15 +350,15 @@ void jump_table::dump()
     jump_node* node = head->nxt;
     int level = 1;
     dump(node, level);
-    std::cout << "====================" << std::endl;
+    printf("=================\n");
 }
 
 void jump_table::dump(const jump_node* node, int level)
 {
     while (node) {
-        for (int i = 0; i < level; ++i) std::cout << "\t";
+        for (int i = 0; i < level; ++i) printf("\t");
         node->b->dump();
-        std::cout << node->sub_cnt << ";" << std::endl;
+        printf("%d;\n", node->sub_cnt);
         if (node->down) {
             dump(node->down, level + 1);
         }
