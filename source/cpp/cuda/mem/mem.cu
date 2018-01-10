@@ -96,7 +96,7 @@ m_info* mem::new_block(int size)
             if (phb->len > db->len) {
                 phb->start = (void*)(((uint64_t)phb->start) + db->len);
                 phb->len -= db->len;
-                phb2->start = (void*)(((uint64_t)phb->start) + db->len);
+                phb2->start = (void*)(((uint64_t)phb2->start) + db->len);
                 phb2->len -= db->len;
 
                 tables[HOST][FREE][SIZE]->insert(phb2);
@@ -109,7 +109,7 @@ m_info* mem::new_block(int size)
             // copy from  tmp_info->p_d to tmp_info->p_h, size: tmp_info->size;
             HANDLE_CUDA_ERROR(cudaMemcpy(tmp_info->p_h, tmp_info->p_d, tmp_info->sz, cudaMemcpyDeviceToHost));
             tmp_info->p_d = 0;
-            hp2info.insert(addr_key(tmp_info->p_d), tmp_info);
+            hp2info.insert(addr_key(tmp_info->p_h), tmp_info);
 
             // alloc tmp_info->p_d to info->p_d 
             mem_block* newdb = new mem_block(db->start, align_size);
@@ -122,7 +122,7 @@ m_info* mem::new_block(int size)
             if (db->len > align_size) {
                 db->start = (void*)(((uint64_t)db->start) + align_size);
                 db->len -= align_size;
-                db2->start = (void*)(((uint64_t)db->start) + align_size);
+                db2->start = (void*)(((uint64_t)db2->start) + align_size);
                 db2->len -= align_size;
 
                 tables[DEVICE][FREE][ADDR]->insert(db);
@@ -231,7 +231,7 @@ void* mem::get(m_info* info)
         info->p_h = 0;
         info->p_d = new_device_info->p_d;
 
-        dp2info.remove(addr_key(new_device_info));
+        dp2info.remove(addr_key(new_device_info->p_d));
         delete new_device_info;
 
         dp2info.insert(addr_key(info->p_d), info);
