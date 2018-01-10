@@ -5,15 +5,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-jump_table::jump_table()
+jump_table::jump_table() : jump_table(5)
 {
-    stride = 5;
-    head = new jump_node(0);
-    head->prv = 0;
-    head->nxt = 0;
-    head->up = 0;
-    head->down = 0;
-    printf("this: %lx, head: %lx, size:%ld\n", (uint64_t)this, (uint64_t)head, sizeof(head));
 }
 jump_table::jump_table(int stride) : stride(stride)
 {
@@ -23,7 +16,6 @@ jump_table::jump_table(int stride) : stride(stride)
     head->nxt = 0;
     head->up = 0;
     head->down = 0;
-    printf("this: %lx, head: %lx, size:%ld\n", (uint64_t)this, (uint64_t)head, sizeof(head));
 }
 jump_table::~jump_table()
 {

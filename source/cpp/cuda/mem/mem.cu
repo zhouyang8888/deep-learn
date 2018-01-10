@@ -16,13 +16,11 @@ const int mem::SIZE   = 1;
 
 mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197)
 {
-    printf("%ld\n", sizeof(void*));
     for(int i = 0; i < 2; ++i)
         for(int j = 0; j < 2; ++j)
-            for(int k = 0; k < 2; ++k) {
+            for(int k = 0; k < 2; ++k) 
                 tables[i][j][k] = new jump_table(5);
-                printf("%lx, %lx, %ld\n", (uint64_t)tables[i][j][k], (uint64_t)tables[i][j][k]->head, sizeof(tables[i][j][k]->head));
-            }
+
     void* p_d = 0;
     HANDLE_CUDA_ERROR(cudaMalloc(&p_d, dsize));
 
