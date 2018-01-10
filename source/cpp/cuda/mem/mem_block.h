@@ -43,7 +43,7 @@ public:
     }
 
     inline void dump() {
-        printf("(%lx, %lx)", (uint64_t)(start), (uint64_t)(len));
+        printf("(%lx, %ld)", (uint64_t)(start), (uint64_t)(len));
     }
 
 };

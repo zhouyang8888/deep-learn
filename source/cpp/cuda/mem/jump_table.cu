@@ -144,14 +144,16 @@ void jump_table::insert(block* pb)
             f->prv = node;
             node->nxt = f;
 
-            if (head->nxt == f) head->nxt = node;
-            else {
-                    node->up = f->up;
-                    f->up->down = node;
-                    do {
-                        f = f->up;
-                        f->b = node->b;
-                    } while (f->up);
+            if (head->nxt == f) {
+                head->nxt = node;
+                node->prv = head;
+            } else {
+                node->up = f->up;
+                f->up->down = node;
+                do {
+                    f = f->up;
+                    f->b = node->b;
+                } while (f->up);
             }
         } else {
             head->nxt = node;
@@ -375,7 +377,7 @@ void jump_table::dump(const jump_node* node, int level)
 
 void test_addr()
 {
-    jump_table t;
+    jump_table t(4);
 
     mem_block b((void*)11, 77);
 
@@ -456,7 +458,7 @@ void test_addr()
 
 void test_size()
 {
-    jump_table t(3);
+    jump_table t(5);
 
     mem_block2 b((void*)11, 77);
 
@@ -537,14 +539,14 @@ void test_size()
     mem_block2 blocks[] = {{(void*)40, 39}, {(void*)55, 33}, {(void*)0, 99}, {(void*)0, 88}, {(void*)40, 0}};
     for (int i = 0; i < sizeof(blocks) / sizeof(mem_block2); ++i) {
         ret = t.ge(blocks[i]);
-        std::cout << "ge:" << std::endl;
+        printf("ge:\n");
         blocks[i].dump();
-        std::cout << " => ";
+        printf(" => ");
         if (ret)
             ret->b->dump();
         else
-            std::cout << ret;
-        std::cout << std::endl;
+            printf("%lx", (uint64_t)ret);
+        printf("\n");
     }
     ////////////////////////////////
 
@@ -586,31 +588,31 @@ void test_size()
 }
 void print_tranverse(jump_table& t)
 {
-    std::cout << "Forward: " << std::endl;
+    printf("Forward: \n");
     jump_node* itr = t.first();
     int i = 0;
     while (itr) {
         itr->b->dump();
         itr = t.next(itr);
-        std::cout << " -> ";
-        if (!(++i % 5)) std::cout << std::endl;
+        printf(" -> ");
+        if (!(++i % 5)) printf("\n");
     }
-    std::cout << std::endl;
+    printf("\n");
 
-    std::cout << "Backward: " << std::endl;
+    printf("Backward: \n");
     itr = t.last();
     i = 0;
     while (itr) {
         itr->b->dump();
         itr = t.prev(itr);
-        std::cout << " -> ";
-        if (!(++i % 5)) std::cout << std::endl;
+        printf(" -> ");
+        if (!(++i % 5)) printf("\n");
     }
-    std::cout << std::endl;
+    printf("\n");
 }
 void test_tranverse()
 {
-    jump_table t(3);
+    jump_table t(5);
 
     mem_block b((void*)11, 77);
 
@@ -657,7 +659,7 @@ void test_tranverse()
 }
 void test_tranverse2()
 {
-    jump_table t(2);
+    jump_table t(4);
 
     mem_block2 b((void*)11, 77);
 

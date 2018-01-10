@@ -57,8 +57,8 @@ class mem {
 
 
         inline int align(int size) { return ((size + 3) >> 2) << 2; }
-        const m_info* get_device_addr_info(void* addr);
-        const m_info* get_host_addr_info(void* addr);
+        m_info* get_device_addr_info(void* addr);
+        m_info* get_host_addr_info(void* addr);
     private:
         static const int DEVICE;
         static const int HOST;

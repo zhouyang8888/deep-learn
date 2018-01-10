@@ -20,7 +20,7 @@ mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197)
     for(int i = 0; i < 2; ++i)
         for(int j = 0; j < 2; ++j)
             for(int k = 0; k < 2; ++k) {
-                tables[i][j][k] = new jump_table();
+                tables[i][j][k] = new jump_table(5);
                 printf("%lx, %lx, %ld\n", (uint64_t)tables[i][j][k], (uint64_t)tables[i][j][k]->head, sizeof(tables[i][j][k]->head));
             }
     void* p_d = 0;
@@ -48,9 +48,9 @@ m_info* mem::new_block(int size)
     mem_block2 b2(0, align_size);
     jump_node* node = tables[DEVICE][FREE][SIZE]->ge(b2);
     if (node) {
-        mem_block2* freeb2 = const_cast<mem_block2*>(dynamic_cast<const mem_block2*>(tables[DEVICE][FREE][SIZE]->remove(node)));
+        mem_block2* freeb2 = dynamic_cast<mem_block2*>(tables[DEVICE][FREE][SIZE]->remove(node));
         mem_block freeb_p(freeb2->start, freeb2->len);
-        mem_block* freeb = const_cast<mem_block*>(dynamic_cast<const mem_block*>(tables[DEVICE][FREE][ADDR]->remove(freeb_p)));
+        mem_block* freeb = dynamic_cast<mem_block*>(tables[DEVICE][FREE][ADDR]->remove(freeb_p));
 
         info->p_d = freeb->start;
         info->sz = size;
@@ -74,18 +74,18 @@ m_info* mem::new_block(int size)
         jump_node* node = tables[DEVICE][MALLOC][SIZE]->ge(b2);
         if (node) {
             // remove device memory.
-            mem_block2* db2 = const_cast<mem_block2*>(dynamic_cast<const mem_block2*>(tables[DEVICE][MALLOC][SIZE]->remove(node)));
+            mem_block2* db2 = dynamic_cast<mem_block2*>(tables[DEVICE][MALLOC][SIZE]->remove(node));
             mem_block tmpdb(db2->start, db2->len);
-            mem_block* db = const_cast<mem_block*>(dynamic_cast<const mem_block*>(tables[DEVICE][MALLOC][ADDR]->remove(tmpdb)));
+            mem_block* db = dynamic_cast<mem_block*>(tables[DEVICE][MALLOC][ADDR]->remove(tmpdb));
             m_info* tmp_info = *dp2info.get(addr_key(db->start));
             dp2info.remove(addr_key(db->start));
 
             // alloc host memory.
             mem_block2 hb2(0, db->len);
             jump_node* phnode_s = tables[HOST][FREE][SIZE]->ge(hb2);
-            mem_block2* phb2 = const_cast<mem_block2*>(dynamic_cast<const mem_block2*>(tables[HOST][FREE][SIZE]->remove(phnode_s)));
+            mem_block2* phb2 = dynamic_cast<mem_block2*>(tables[HOST][FREE][SIZE]->remove(phnode_s));
             mem_block hb(phb2->start, phb2->len);
-            mem_block* phb = const_cast<mem_block*>(dynamic_cast<const mem_block*>(tables[HOST][FREE][ADDR]->remove(hb)));
+            mem_block* phb = dynamic_cast<mem_block*>(tables[HOST][FREE][ADDR]->remove(hb));
 
             mem_block* newhb = new mem_block(phb->start, db->len);
             mem_block2* newhb2 = new mem_block2(phb->start, db->len);
@@ -139,6 +139,11 @@ m_info* mem::new_block(int size)
         }
     }
 
+    printf("exit \n");
+    tables[DEVICE][FREE][SIZE]->dump();
+    tables[DEVICE][MALLOC][SIZE]->dump();
+    tables[DEVICE][FREE][ADDR]->dump();
+    tables[DEVICE][MALLOC][ADDR]->dump();
     dp2info.insert(addr_key(info->p_d), info);
     return info;
 }
@@ -167,16 +172,16 @@ void mem::free_block(jump_table* malloced_p, jump_table* malloced_s,
     jump_node* node_p = malloced_p->eq(b);
     jump_node* node_s = malloced_s->eq(b2);
     if (node_p) {
-        block* b_p = const_cast<block*>(node_p->b);
+        block* b_p = node_p->b;
         malloced_p->remove(node_p);
-        block* b_s = const_cast<block*>(node_s->b);
+        block* b_s = node_s->b;
         malloced_s->remove(node_s);
 
         jump_node* prev_node = freed_p->le(b);
         if (prev_node 
             && ((uint64_t)dynamic_cast<mem_block*>(prev_node->b)->start) + dynamic_cast<mem_block*>(prev_node->b)->len == (uint64_t)p) {
             mem_block2 mb2(dynamic_cast<mem_block*>(prev_node->b)->start, dynamic_cast<mem_block*>(prev_node->b)->len);
-            mem_block2* pmb2 = const_cast<mem_block2*>(dynamic_cast<const mem_block2*>(freed_s->remove(mb2)));
+            mem_block2* pmb2 = dynamic_cast<mem_block2*>(freed_s->remove(mb2));
             pmb2->len += aligned_size;
             freed_s->insert(pmb2);
 
@@ -200,7 +205,7 @@ void mem::free_block(jump_table* malloced_p, jump_table* malloced_s,
             jump_node* next_node = freed_p->ge(b);
             if (next_node && (uint64_t) p + aligned_size == (uint64_t) dynamic_cast<mem_block*>(next_node->b)->start) {
                 mem_block2 mb2(dynamic_cast<mem_block*>(next_node->b)->start, dynamic_cast<mem_block*>(next_node->b)->len);
-                mem_block2* pmb2 = const_cast<mem_block2*>(dynamic_cast<const mem_block2*>(freed_s->remove(mb2)));
+                mem_block2* pmb2 = dynamic_cast<mem_block2*>(freed_s->remove(mb2));
                 pmb2->start = p;
                 pmb2->len += aligned_size;
                 freed_s->insert(pmb2);
@@ -239,14 +244,14 @@ void* mem::get(m_info* info)
     return info->p_d;
 }
 
-const m_info* mem::get_device_addr_info(void* addr)
+m_info* mem::get_device_addr_info(void* addr)
 {
     m_info* const* ret = dp2info.get(addr_key(addr));
     if (ret) return *ret;
     else return 0;
 }
 
-const m_info* mem::get_host_addr_info(void* addr)
+m_info* mem::get_host_addr_info(void* addr)
 {
     m_info* const* ret = hp2info.get(addr_key(addr));
     if (ret) return *ret;
@@ -258,13 +263,14 @@ const m_info* mem::get_host_addr_info(void* addr)
 
 int main(int argc, char** argv)
 {
-    mem mm(1024, 2048);
+    mem mm(1024, 204800);
 
-    m_info* p1 = mm.new_block(256);
+    m_info* p1 = mm.new_block(512);
     m_info* p2 = mm.new_block(256);
     m_info* p3 = mm.new_block(512);
-    m_info* p4 = mm.new_block(128);
-    m_info* p5 = mm.new_block(128);
+    m_info* p4 = mm.new_block(256);
+    m_info* p5 = mm.new_block(256);
+    // mm.get(p2);
     m_info* p6 = mm.new_block(128);
     mm.get(p2);
 
