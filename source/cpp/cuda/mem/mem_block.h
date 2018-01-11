@@ -30,7 +30,7 @@ public:
     }
 
     inline void dump() {
-        printf("(%lx, %u, %u)", (uint64_t)(start), len, sn);
+        printf("(%lx, %x, %u)", (uint64_t)(start), len, sn);
     }
 
 };
@@ -55,7 +55,7 @@ public:
         return len == o.len && sn == o.sn && (uint64_t) start == (uint64_t) o.start;
     }
     inline void dump() {
-        printf("(%lx, %u, %u)", (uint64_t)(start), len, sn);
+        printf("(%lx, %x, %u)", (uint64_t)(start), len, sn);
     }
 public:
     static int cnt;

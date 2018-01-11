@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -16,41 +17,35 @@ const int mem::FREE   = 1;
 const int mem::ADDR   = 0;
 const int mem::SIZE   = 1;
 
-mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197)
+mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197), host_capacity(hsize), device_capacity(dsize)
 {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
     for(int i = 0; i < 2; ++i)
         for(int j = 0; j < 2; ++j)
             for(int k = 0; k < 2; ++k) 
                 tables[i][j][k] = new jump_table(5);
 
-    void* p_d = 0;
-    HANDLE_CUDA_ERROR(cudaMalloc(&p_d, dsize));
+    device_start = 0;
+    HANDLE_CUDA_ERROR(cudaMalloc(&device_start, dsize));
 
-    void* p_h = malloc(hsize);
-    assert(p_h);
+    host_start = malloc(hsize);
+    assert(host_start);
 
-    mem_block* dfp = new mem_block(p_d, dsize); 
+    mem_block* dfp = new mem_block(device_start, device_capacity); 
     tables[DEVICE][FREE][ADDR]->insert(dfp);
-    mem_block2* dfs = new mem_block2(p_d, dsize); 
+    mem_block2* dfs = new mem_block2(device_start, device_capacity); 
     tables[DEVICE][FREE][SIZE]->insert(dfs);
     
-    mem_block* hfp = new mem_block(p_h, hsize); 
+    mem_block* hfp = new mem_block(host_start, host_capacity); 
     tables[HOST][FREE][ADDR]->insert(hfp);
-    mem_block2* hfs = new mem_block2(p_h, hsize); 
+    mem_block2* hfs = new mem_block2(host_start, host_capacity); 
     tables[HOST][FREE][SIZE]->insert(hfs);
 }
 
 m_info* mem::alloc_block(mem_block2& b_s)
 {
-    /*
-       printf("################\n");
-       b_s.dump();
-       printf("\nSize table:\n");
-       tables[DEVICE][FREE][SIZE]->dump();
-       printf("Addr table:\n");
-       tables[DEVICE][FREE][ADDR]->dump();
-       printf("****************\n");
-     */
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+
     jump_node* node = tables[DEVICE][FREE][SIZE]->ge(b_s);
     if (node) {
         mem_block2* freeb2 = dynamic_cast<mem_block2*>(tables[DEVICE][FREE][SIZE]->remove(node));
@@ -84,6 +79,7 @@ m_info* mem::alloc_block(mem_block2& b_s)
 }
 jump_node* mem::select_malloc_node(mem_block2& b_s)
 {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
     jump_node* node = tables[DEVICE][MALLOC][SIZE]->ge(b_s);
     if (!node)
         node = tables[DEVICE][MALLOC][SIZE]->last();
@@ -92,6 +88,7 @@ jump_node* mem::select_malloc_node(mem_block2& b_s)
 }
 m_info* mem::new_block(int size)
 {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
     int align_size = mem::align(size);
     mem_block2 b_s(0, align_size, 0);
 
@@ -135,24 +132,36 @@ m_info* mem::new_block(int size)
 
 void mem::free_block(m_info* info)
 {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
     if (info->p_h) {
         free_block(tables[HOST][MALLOC][ADDR], tables[HOST][MALLOC][SIZE],
                    tables[HOST][FREE][ADDR], tables[HOST][FREE][SIZE],
                    info->p_h, info->sz);
+        hp2info.remove(addr_key(info->p_h));
     }
     if (info->p_d) {
         free_block(tables[DEVICE][MALLOC][ADDR], tables[DEVICE][MALLOC][SIZE],
                    tables[DEVICE][FREE][ADDR], tables[DEVICE][FREE][SIZE],
                    info->p_d, info->sz);
+        dp2info.remove(addr_key(info->p_d));
     }
 }
 
 void* mem::swap_out(mem_block& block)
 {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
     // get free host block
     mem_block2 host_block_s(0, block.len, 0);
 
     jump_node* free_host_node_s = tables[HOST][FREE][SIZE]->ge(host_block_s);
+    if (!free_host_node_s) {
+        host_memory_fix();
+        free_host_node_s = tables[HOST][FREE][SIZE]->ge(host_block_s);
+        if (!free_host_node_s) {
+            printf(":( Host memory too small! EXIT!!!\n");
+            exit(-1);
+        }
+    }
     mem_block2* free_host_block_s = dynamic_cast<mem_block2*>(free_host_node_s->b);
     tables[HOST][FREE][SIZE]->remove(free_host_node_s);
 
@@ -188,6 +197,7 @@ void* mem::swap_out(mem_block& block)
 }
 void mem::drop_block_into_free(jump_table* freed_p, jump_table* freed_s, mem_block* b_p, mem_block2* b_s)
 {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
     b_p->sn = 0;
     b_s->sn = 0;
 
@@ -257,6 +267,7 @@ void mem::free_block(jump_table* malloced_p, jump_table* malloced_s,
                      jump_table* freed_p, jump_table* freed_s, 
                      void* p, int size)
 {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
     int aligned_size = this->align(size);
     mem_block b(p, aligned_size, 0);
     block* block_p = malloced_p->remove(b);
@@ -270,15 +281,15 @@ void mem::free_block(jump_table* malloced_p, jump_table* malloced_s,
                              , dynamic_cast<mem_block2*>(block_s));
     }
 }
-
 void* mem::get(m_info* info)
 {
-    if (!info->p_d) {
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    if (!info->p_d && !info->p_h) return 0;
+    if (info->p_h) {
         m_info* new_device_info = new_block(info->sz);
         cudaMemcpy(new_device_info->p_d, info->p_h, info->sz, cudaMemcpyHostToDevice);
 
         free_block(info);
-        hp2info.remove(addr_key(info->p_h));
 
         info->p_h = 0;
         info->p_d = new_device_info->p_d;
@@ -290,7 +301,73 @@ void* mem::get(m_info* info)
     }
     return info->p_d;
 }
+void mem::host_memory_fix()
+{
+    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    hash<addr_key, m_info*>& hash_table = hp2info;
+    jump_table* malloced_addr = tables[HOST][MALLOC][ADDR];
+    jump_table* malloced_size = tables[HOST][MALLOC][SIZE];
+    jump_table* freed_addr = tables[HOST][FREE][ADDR];
+    jump_table* freed_size = tables[HOST][FREE][SIZE];
 
+    jump_node* itr = malloced_addr->first();
+    if (itr) {
+        // update by addr
+        void* desc = host_start;
+        while (itr) {
+            mem_block* b = dynamic_cast<mem_block*>(itr->b);
+            void* src = b->start;
+            int len = b->len;
+            memmove(desc, src, len);
+            b->start = desc;
+
+            addr_key srckey(src);
+            m_info* p_info = *hash_table.get(srckey);
+            hash_table.remove(srckey);
+            p_info->p_h = desc;
+            hash_table.insert(addr_key(desc), p_info);
+
+            // 
+            desc = (void*)((uint64_t)desc + len);
+            itr = malloced_addr->next(itr);
+        }
+
+        printf("yyyyy\n");
+        malloced_addr->dump();
+
+        // update size table
+        itr = malloced_size->first();
+        while (itr) {
+            block* pb = malloced_size->remove(itr);
+            delete pb;
+            itr = malloced_size->first();
+        }
+        itr = malloced_addr->first();
+        while (itr) {
+            mem_block* mb = dynamic_cast<mem_block*>(itr->b);
+            mem_block2* mb2 = new mem_block2(*mb);
+            malloced_size->insert(mb2);
+            itr = malloced_addr->next(itr);
+        }
+
+        // free table
+        itr = freed_addr->first();
+        while (itr) {
+            block* pb = freed_addr->remove(itr);
+            delete pb;
+            itr = freed_addr->first();
+        }
+        itr = freed_size->first();
+        while (itr) {
+            block* pb = freed_size->remove(itr);
+            delete pb;
+            itr = freed_size->first();
+        }
+
+        freed_addr->insert(new mem_block(desc, host_capacity - ((uint64_t)desc - (uint64_t)host_start)));
+        freed_size->insert(new mem_block2(desc, host_capacity - ((uint64_t)desc - (uint64_t)host_start)));
+    }
+}
 m_info* mem::get_device_addr_info(void* addr)
 {
     m_info* const* ret = dp2info.get(addr_key(addr));
@@ -313,13 +390,33 @@ m_info* mem::get_host_addr_info(void* addr)
 
 int main(int argc, char** argv)
 {
-    mem mm(1024, 51200);
+    mem mm(1024, 51200 - 1024);
 
     srand(time(0));
-    for (int i = 0; i < 150; ++i) {
+    
+#define SIZE 170
+    m_info* infos[SIZE];
+    int size = 0;
+    for (int i = 0; i < 15000; ++i) {
         int sz = 1 + rand() % 512;
-        mm.new_block(sz);
+        int align_sz = ((sz + 3) >> 2 << 2);
+        int idx = i % SIZE;
+
+        if (i >= SIZE) {
+            void* p = mm.get(infos[idx]);
+
+            printf("Free %d\n", ((infos[idx]->sz + 3) >> 2) << 2);
+            size -= ((infos[idx]->sz + 3) >> 2) << 2;
+            mm.free_block(infos[idx]);
+            delete infos[idx];
+        }
+
+        printf("[%d th, %d]: Host size: %d - %d = %d\n", i, sz, 51200, size, 51200 - size);
+        infos[idx] = mm.new_block(sz);
+        size += align_sz;
+        printf("Alloc %d\n", align_sz);
     }
+#undef SIZE
     /*
        m_info* p1 = mm.new_block(512);
        m_info* p2 = mm.new_block(256);

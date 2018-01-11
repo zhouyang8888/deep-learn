@@ -24,10 +24,13 @@
 #include "mem_block.h"
 #include <cstdint>
 
-struct m_info {
+class m_info {
+public:
 	void* p_h;
 	void* p_d;
 	int sz;
+public:
+    inline m_info(): p_h(0), p_d(0), sz(0){}
 };
 
 class addr_key : public hash_key {
@@ -66,6 +69,12 @@ class mem {
         static const int FREE;
         static const int ADDR;
         static const int SIZE;
+
+        void* host_start;
+        void* device_start;
+        uint64_t host_capacity;
+        uint64_t device_capacity;
+
     private:
         void free_block(jump_table* malloced_p, jump_table* malloced_s, 
                         jump_table* freed_p, jump_table* freed_s, 
@@ -75,6 +84,8 @@ class mem {
         jump_node* select_malloc_node(mem_block2& b_s);
         m_info* alloc_block(mem_block2& b_s);
         void* swap_out(mem_block& block);
+
+        void host_memory_fix();
 };
 
 #endif
