@@ -17,9 +17,11 @@ const int mem::FREE   = 1;
 const int mem::ADDR   = 0;
 const int mem::SIZE   = 1;
 
+// #define LOG printf("%s(%d), %s\n", __FILE__, __LINE__, __FUNCTION__)
+#define LOG ;
 mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197), host_capacity(hsize), device_capacity(dsize)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     for(int i = 0; i < 2; ++i)
         for(int j = 0; j < 2; ++j)
             for(int k = 0; k < 2; ++k) 
@@ -27,6 +29,7 @@ mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197), host_capacity(hsize
 
     device_start = 0;
     HANDLE_CUDA_ERROR(cudaMalloc(&device_start, dsize));
+    cudaDeviceSynchronize();
 
     host_start = malloc(hsize);
     assert(host_start);
@@ -44,7 +47,7 @@ mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197), host_capacity(hsize
 
 m_info* mem::alloc_block(mem_block2& b_s)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
 
     jump_node* node = tables[DEVICE][FREE][SIZE]->ge(b_s);
     if (node) {
@@ -79,7 +82,7 @@ m_info* mem::alloc_block(mem_block2& b_s)
 }
 jump_node* mem::select_malloc_node(mem_block2& b_s)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     jump_node* node = tables[DEVICE][MALLOC][SIZE]->ge(b_s);
     if (!node)
         node = tables[DEVICE][MALLOC][SIZE]->last();
@@ -88,7 +91,7 @@ jump_node* mem::select_malloc_node(mem_block2& b_s)
 }
 m_info* mem::new_block(int size)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     int align_size = mem::align(size);
     mem_block2 b_s(0, align_size, 0);
 
@@ -132,7 +135,7 @@ m_info* mem::new_block(int size)
 
 void mem::free_block(m_info* info)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     if (info->p_h) {
         free_block(tables[HOST][MALLOC][ADDR], tables[HOST][MALLOC][SIZE],
                    tables[HOST][FREE][ADDR], tables[HOST][FREE][SIZE],
@@ -149,7 +152,7 @@ void mem::free_block(m_info* info)
 
 void* mem::swap_out(mem_block& block)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     // get free host block
     mem_block2 host_block_s(0, block.len, 0);
 
@@ -191,13 +194,14 @@ void* mem::swap_out(mem_block& block)
 
     // move data
     HANDLE_CUDA_ERROR(cudaMemcpy(malloc_host_block_p->start, block.start, block.len, cudaMemcpyDeviceToHost));
+    cudaDeviceSynchronize();
 
     // return host addr.
     return malloc_host_block_p->start;
 }
 void mem::drop_block_into_free(jump_table* freed_p, jump_table* freed_s, mem_block* b_p, mem_block2* b_s)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     b_p->sn = 0;
     b_s->sn = 0;
 
@@ -267,7 +271,7 @@ void mem::free_block(jump_table* malloced_p, jump_table* malloced_s,
                      jump_table* freed_p, jump_table* freed_s, 
                      void* p, int size)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     int aligned_size = this->align(size);
     mem_block b(p, aligned_size, 0);
     block* block_p = malloced_p->remove(b);
@@ -283,7 +287,7 @@ void mem::free_block(jump_table* malloced_p, jump_table* malloced_s,
 }
 void* mem::get(m_info* info)
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     if (!info->p_d && !info->p_h) return 0;
     if (info->p_h) {
         m_info* new_device_info = new_block(info->sz);
@@ -303,7 +307,7 @@ void* mem::get(m_info* info)
 }
 void mem::host_memory_fix()
 {
-    printf("File:%s, line:%d\n", __FUNCTION__, __LINE__);
+    LOG;
     hash<addr_key, m_info*>& hash_table = hp2info;
     jump_table* malloced_addr = tables[HOST][MALLOC][ADDR];
     jump_table* malloced_size = tables[HOST][MALLOC][SIZE];
@@ -381,6 +385,7 @@ m_info* mem::get_host_addr_info(void* addr)
     if (ret) return *ret;
     else return 0;
 }
+#undef LOG
 
 #ifdef __TEST_MEM__
 #undef __TEST_MEM__
@@ -394,16 +399,21 @@ int main(int argc, char** argv)
 
     srand(time(0));
     
-#define SIZE 170
+#define SIZE 160
     m_info* infos[SIZE];
     int size = 0;
-    for (int i = 0; i < 15000; ++i) {
+    for (int i = 0; i < 1500000; ++i) {
         int sz = 1 + rand() % 512;
         int align_sz = ((sz + 3) >> 2 << 2);
         int idx = i % SIZE;
 
         if (i >= SIZE) {
             void* p = mm.get(infos[idx]);
+            assert(p);
+            int result;
+            cudaMemcpy(&result, p, sizeof(int), cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            assert(result == infos[idx]->sz);
 
             printf("Free %d\n", ((infos[idx]->sz + 3) >> 2) << 2);
             size -= ((infos[idx]->sz + 3) >> 2) << 2;
@@ -413,6 +423,9 @@ int main(int argc, char** argv)
 
         printf("[%d th, %d]: Host size: %d - %d = %d\n", i, sz, 51200, size, 51200 - size);
         infos[idx] = mm.new_block(sz);
+        cudaMemcpy(infos[idx]->p_d, &infos[idx]->sz, sizeof(int), cudaMemcpyHostToDevice);
+        // cudaMemset(infos[idx]->p_d, (infos[idx]->sz & 0xFF), infos[idx]->sz);
+        cudaDeviceSynchronize();
         size += align_sz;
         printf("Alloc %d\n", align_sz);
     }
