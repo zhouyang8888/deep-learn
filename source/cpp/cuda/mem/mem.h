@@ -70,6 +70,11 @@ class mem {
         void free_block(jump_table* malloced_p, jump_table* malloced_s, 
                         jump_table* freed_p, jump_table* freed_s, 
                         void* p, int size);
+        void drop_block_into_free(jump_table* free_p, jump_table* free_s
+                                  , mem_block* b_p, mem_block2* b_s);
+        jump_node* select_malloc_node(mem_block2& b_s);
+        m_info* alloc_block(mem_block2& b_s);
+        void* swap_out(mem_block& block);
 };
 
 #endif

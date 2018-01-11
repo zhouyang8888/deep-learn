@@ -38,104 +38,77 @@ mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197)
     tables[HOST][FREE][SIZE]->insert(hfs);
 }
 
-m_info* mem::new_block(int size)
+m_info* mem::alloc_block(mem_block2& b_s)
 {
-    m_info* info = new m_info();
-    int align_size = mem::align(size);
-
-    mem_block2 b2(0, align_size);
-    jump_node* node = tables[DEVICE][FREE][SIZE]->ge(b2);
+    jump_node* node = tables[DEVICE][FREE][SIZE]->ge(b_s);
     if (node) {
         mem_block2* freeb2 = dynamic_cast<mem_block2*>(tables[DEVICE][FREE][SIZE]->remove(node));
         mem_block freeb_p(freeb2->start, freeb2->len);
         mem_block* freeb = dynamic_cast<mem_block*>(tables[DEVICE][FREE][ADDR]->remove(freeb_p));
 
+        m_info* info = new m_info();
         info->p_d = freeb->start;
-        info->sz = size;
         info->p_h = 0;
-        tables[DEVICE][MALLOC][ADDR]->insert(new mem_block(freeb->start, align_size));
-        tables[DEVICE][MALLOC][SIZE]->insert(new mem_block2(freeb->start, align_size));
+        info->sz = 0;
 
-        if (freeb->len > align_size) {
-            freeb->start = (void*)(((uint64_t) freeb->start) + align_size);
-            freeb->len -= align_size;
+        tables[DEVICE][MALLOC][SIZE]->insert(new mem_block2(freeb->start, b_s.len, ++mem_block2::cnt));
+        tables[DEVICE][MALLOC][ADDR]->insert(new mem_block(freeb->start, b_s.len, mem_block2::cnt));
+
+        if (freeb->len > b_s.len) {
+            freeb->start = (void*)(((uint64_t) freeb->start) + b_s.len);
+            freeb->len -= b_s.len;
             tables[DEVICE][FREE][ADDR]->insert(freeb); 
-            
-            freeb2->start = (void*)(((uint64_t) freeb2->start) + align_size);
-            freeb2->len -= align_size;
+
+            freeb2->start = (void*)(((uint64_t) freeb2->start) + b_s.len);
+            freeb2->len -= b_s.len;
             tables[DEVICE][FREE][SIZE]->insert(freeb2);
         } else {
             delete freeb2;
             delete freeb;
         }
-    } else {
-        jump_node* node = tables[DEVICE][MALLOC][SIZE]->ge(b2);
+        return info;
+    }
+
+    return 0;
+}
+jump_node* mem::select_malloc_node(mem_block2& b_s)
+{
+    jump_node* node = tables[DEVICE][MALLOC][SIZE]->ge(b_s);
+    if (!node)
+        node = tables[DEVICE][MALLOC][SIZE]->last();
+    
+    return node;
+}
+m_info* mem::new_block(int size)
+{
+    int align_size = mem::align(size);
+    mem_block2 b_s(0, align_size, 0);
+
+    m_info* info = 0;
+    while (!(info = alloc_block(b_s))) {
+        jump_node* node = select_malloc_node(b_s);
         if (node) {
-            // remove device memory.
-            mem_block2* db2 = dynamic_cast<mem_block2*>(tables[DEVICE][MALLOC][SIZE]->remove(node));
-            mem_block tmpdb(db2->start, db2->len);
-            mem_block* db = dynamic_cast<mem_block*>(tables[DEVICE][MALLOC][ADDR]->remove(tmpdb));
-            m_info* tmp_info = *dp2info.get(addr_key(db->start));
-            dp2info.remove(addr_key(db->start));
+            mem_block2* malloc_device_block_s = dynamic_cast<mem_block2*>(node->b);
+            tables[DEVICE][MALLOC][SIZE]->remove(node);
 
-            // alloc host memory.
-            mem_block2 hb2(0, db->len);
-            jump_node* phnode_s = tables[HOST][FREE][SIZE]->ge(hb2);
-            mem_block2* phb2 = dynamic_cast<mem_block2*>(tables[HOST][FREE][SIZE]->remove(phnode_s));
-            mem_block hb(phb2->start, phb2->len);
-            mem_block* phb = dynamic_cast<mem_block*>(tables[HOST][FREE][ADDR]->remove(hb));
+            mem_block copy_device_block_p(*malloc_device_block_s);
+            mem_block* malloc_device_block_p = dynamic_cast<mem_block*>(tables[DEVICE][MALLOC][ADDR]->remove(copy_device_block_p));
 
-            mem_block* newhb = new mem_block(phb->start, db->len);
-            mem_block2* newhb2 = new mem_block2(phb->start, db->len);
-            tables[HOST][MALLOC][ADDR]->insert(newhb);
-            tables[HOST][MALLOC][SIZE]->insert(newhb2);
-            tmp_info->p_h = phb->start;
+            void* host_p = swap_out(*malloc_device_block_p);
 
-            if (phb->len > db->len) {
-                phb->start = (void*)(((uint64_t)phb->start) + db->len);
-                phb->len -= db->len;
-                phb2->start = (void*)(((uint64_t)phb2->start) + db->len);
-                phb2->len -= db->len;
-
-                tables[HOST][FREE][SIZE]->insert(phb2);
-                tables[HOST][FREE][ADDR]->insert(phb);
-            } else {
-                delete phb;
-                delete phb2;
-            }
-
-            // copy from  tmp_info->p_d to tmp_info->p_h, size: tmp_info->size;
-            HANDLE_CUDA_ERROR(cudaMemcpy(tmp_info->p_h, tmp_info->p_d, tmp_info->sz, cudaMemcpyDeviceToHost));
+            m_info* tmp_info = *dp2info.get(addr_key(malloc_device_block_p->start));
+            dp2info.remove(addr_key(malloc_device_block_p->start));
+            tmp_info->p_h = host_p;
             tmp_info->p_d = 0;
             hp2info.insert(addr_key(tmp_info->p_h), tmp_info);
 
-            // alloc tmp_info->p_d to info->p_d 
-            mem_block* newdb = new mem_block(db->start, align_size);
-            mem_block2* newdb2 = new mem_block2(db->start, align_size);
-            tables[DEVICE][MALLOC][ADDR]->insert(newdb);
-            tables[DEVICE][MALLOC][SIZE]->insert(newdb2);
-            info->p_d = db->start;
-            info->p_h = 0;
-            info->sz = size;
-            if (db->len > align_size) {
-                db->start = (void*)(((uint64_t)db->start) + align_size);
-                db->len -= align_size;
-                db2->start = (void*)(((uint64_t)db2->start) + align_size);
-                db2->len -= align_size;
-
-                tables[DEVICE][FREE][ADDR]->insert(db);
-                tables[DEVICE][FREE][SIZE]->insert(db2);
-            } else {
-                delete db;
-                delete db2;
-            }
+            drop_block_into_free(tables[DEVICE][FREE][ADDR], tables[DEVICE][FREE][SIZE]
+                                 , malloc_device_block_p, malloc_device_block_s);
         } else {
-            node = tables[DEVICE][MALLOC][SIZE]->last();
-            // TODO:
-            printf("NOT implemented yet.\n");
-            exit(-1);
+            break;
         }
     }
+    if (info) info->sz = size;
 
     printf("exit \n");
     tables[DEVICE][FREE][SIZE]->dump();
@@ -160,65 +133,128 @@ void mem::free_block(m_info* info)
     }
 }
 
+void* mem::swap_out(mem_block& block)
+{
+    // get free host block
+    mem_block2 host_block_s(block);
+    host_block_s.sn = 0;
+
+    jump_node* free_host_node_s = tables[HOST][FREE][SIZE]->ge(host_block_s);
+    mem_block2* free_host_block_s = dynamic_cast<mem_block2*>(free_host_node_s->b);
+    tables[HOST][FREE][SIZE]->remove(free_host_node_s);
+
+    mem_block host_block_p(*free_host_block_s);
+    mem_block* free_host_block_p = dynamic_cast<mem_block*>(tables[HOST][FREE][ADDR]->remove(host_block_p)); 
+
+    // alloc host block
+    mem_block2* malloc_host_block_s = new mem_block2(free_host_block_p->start
+                                                     , block.len, ++mem_block2::cnt);
+    mem_block* malloc_host_block_p = new mem_block(*malloc_host_block_s);
+    tables[HOST][MALLOC][ADDR]->insert(malloc_host_block_p);
+    tables[HOST][MALLOC][SIZE]->insert(malloc_host_block_s);
+
+    if (free_host_block_s->len > block.len) {
+        free_host_block_s->start = (void*)((uint64_t)free_host_block_s->start + block.len);
+        free_host_block_s->len -= block.len;
+
+        free_host_block_p->start = free_host_block_s->start;
+        free_host_block_p->len = free_host_block_s->len;
+
+        drop_block_into_free(tables[HOST][FREE][ADDR], tables[HOST][FREE][SIZE]
+                             , free_host_block_p, free_host_block_s);
+    } else {
+        delete free_host_block_p;
+        delete free_host_block_s;
+    }
+
+    // move data
+    HANDLE_CUDA_ERROR(cudaMemcpy(malloc_host_block_p->start, block.start, block.len, cudaMemcpyDeviceToHost));
+
+    // return host addr.
+    return malloc_host_block_p->start;
+}
+void mem::drop_block_into_free(jump_table* freed_p, jump_table* freed_s, mem_block* b_p, mem_block2* b_s)
+{
+    b_p->sn = 0;
+    b_s->sn = 0;
+
+    bool merge = false;
+    jump_node* prev_node_p = freed_p->le(*b_p);
+    if (prev_node_p) {
+        mem_block* prev_block_p = dynamic_cast<mem_block*>(prev_node_p->b);
+        if ((uint64_t)prev_block_p->start + prev_block_p->len == (uint64_t)b_p->start) {
+            merge = true;
+            // merge prev_node(addr)
+            mem_block2 copy_prev_block_s(*prev_block_p);
+            mem_block2* prev_block_s = dynamic_cast<mem_block2*>(freed_s->remove(copy_prev_block_s));
+            prev_block_s->len += b_p->len;
+            freed_s->insert(prev_block_s);
+
+            prev_block_p->len += b_p->len;
+
+            jump_node* next_node_p = freed_p->next(prev_node_p);
+            if (next_node_p) {
+                mem_block* next_block_p = dynamic_cast<mem_block*>(next_node_p->b);
+                if ((uint64_t)b_p->start + b_p->len == (uint64_t)next_block_p->start) {
+                    // merge next_node(addr)
+                    freed_s->remove(*prev_block_s);
+                    prev_block_s->len += next_block_p->len;
+                    freed_s->insert(prev_block_s);
+
+                    prev_block_p->len = prev_block_s->len;
+
+                    // delete next_node(addr)
+                    mem_block2 copy_next_block_s(*next_block_p);
+                    block* next_block_s = freed_s->remove(copy_next_block_s);
+                    delete next_block_s;
+
+                    freed_p->remove(next_node_p);
+                    delete next_block_p;
+                }
+            }
+        }
+    }
+    if (!merge) {
+        jump_node* next_node_p = freed_p->ge(*b_p);
+        if (next_node_p) {
+            mem_block* next_block_p = dynamic_cast<mem_block*>(next_node_p->b);
+            if ((uint64_t)b_p->start + b_p->len == (uint64_t)next_block_p->start) {
+                merge = true;
+                // merge into next node
+                mem_block2 copy_next_block_s(*next_block_p);
+                mem_block2* next_block_s = dynamic_cast<mem_block2*>(freed_s->remove(copy_next_block_s));
+                next_block_s->start = b_p->start;
+                next_block_s->len += b_p->len;
+                freed_s->insert(next_block_s);
+
+                next_block_p->start = b_p->start;
+                next_block_p->len += b_p->len;
+            }
+        }
+    }
+    if (!merge) {
+        freed_p->insert(b_p);
+        freed_s->insert(b_s);
+    } else {
+        delete b_p;
+        delete b_s;
+    }
+}
 void mem::free_block(jump_table* malloced_p, jump_table* malloced_s, 
                      jump_table* freed_p, jump_table* freed_s, 
                      void* p, int size)
 {
     int aligned_size = this->align(size);
-    mem_block b(p, aligned_size);
-    mem_block2 b2(p, aligned_size);
-    jump_node* node_p = malloced_p->eq(b);
-    jump_node* node_s = malloced_s->eq(b2);
-    if (node_p) {
-        block* b_p = node_p->b;
-        malloced_p->remove(node_p);
-        block* b_s = node_s->b;
-        malloced_s->remove(node_s);
+    mem_block b(p, aligned_size, 0);
+    block* block_p = malloced_p->remove(b);
+    if (block_p) {
+        mem_block2 copy_block_s(*dynamic_cast<mem_block*>(block_p));
+        block* block_s = malloced_s->remove(copy_block_s);
 
-        jump_node* prev_node = freed_p->le(b);
-        if (prev_node 
-            && ((uint64_t)dynamic_cast<mem_block*>(prev_node->b)->start) + dynamic_cast<mem_block*>(prev_node->b)->len == (uint64_t)p) {
-            mem_block2 mb2(dynamic_cast<mem_block*>(prev_node->b)->start, dynamic_cast<mem_block*>(prev_node->b)->len);
-            mem_block2* pmb2 = dynamic_cast<mem_block2*>(freed_s->remove(mb2));
-            pmb2->len += aligned_size;
-            freed_s->insert(pmb2);
-
-            dynamic_cast<mem_block*>(prev_node->b)->len += aligned_size;
-
-            jump_node* next_node = freed_p->next(prev_node);
-            if (next_node && (uint64_t) p + aligned_size == (uint64_t)dynamic_cast<mem_block*>(next_node->b)->start) {
-                freed_s->remove(*pmb2);
-                pmb2->len += dynamic_cast<mem_block*>(next_node->b)->len;
-                freed_s->insert(pmb2);
-
-                dynamic_cast<mem_block*>(prev_node->b)->len += dynamic_cast<mem_block*>(next_node->b)->len;
-
-                mem_block2 next_mb2(dynamic_cast<mem_block*>(next_node->b)->start, dynamic_cast<mem_block*>(next_node->b)->len);
-                block* pnext_mb2 = freed_s->remove(next_mb2);
-                block* pnext_mb = freed_p->remove(next_node);
-                delete pnext_mb2;
-                delete pnext_mb;
-            }
-        } else {
-            jump_node* next_node = freed_p->ge(b);
-            if (next_node && (uint64_t) p + aligned_size == (uint64_t) dynamic_cast<mem_block*>(next_node->b)->start) {
-                mem_block2 mb2(dynamic_cast<mem_block*>(next_node->b)->start, dynamic_cast<mem_block*>(next_node->b)->len);
-                mem_block2* pmb2 = dynamic_cast<mem_block2*>(freed_s->remove(mb2));
-                pmb2->start = p;
-                pmb2->len += aligned_size;
-                freed_s->insert(pmb2);
-
-                dynamic_cast<mem_block*>(next_node->b)->start = p;
-                dynamic_cast<mem_block*>(next_node->b)->len += aligned_size;
-            } else {
-                freed_p->insert(b_p);
-                freed_s->insert(b_s);
-                b_p = 0;
-                b_s = 0;
-            }
-        }
-        if (b_p) delete b_p;
-        if (b_s) delete b_s;
+        // drop into free table.
+        drop_block_into_free(freed_p, freed_s
+                             , dynamic_cast<mem_block*>(block_p)
+                             , dynamic_cast<mem_block2*>(block_s));
     }
 }
 
