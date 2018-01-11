@@ -42,15 +42,17 @@ public:
     inline mem_block2(const mem_block& b) : mem_block(b) {}
     inline bool operator<(const block& t) const {
         const mem_block2& o = dynamic_cast<const mem_block2&>(t);
-        return len < o.len || len == o.len && sn < o.sn;
+        return len < o.len || len == o.len && sn < o.sn
+            || len == o.len && sn == o.sn && (uint64_t) start < (uint64_t) o.start;
     }
     inline bool operator<=(const block& t) const {
         const mem_block2& o = dynamic_cast<const mem_block2&>(t);
-        return len < o.len || len == o.len && sn <= o.sn;
+        return len < o.len || len == o.len && sn < o.sn
+            || len == o.len && sn == o.sn && (uint64_t) start <= (uint64_t) o.start;
     }
     inline bool operator==(const block& t) const {
         const mem_block2& o = dynamic_cast<const mem_block2&>(t);
-        return len == o.len && sn == o.sn;
+        return len == o.len && sn == o.sn && (uint64_t) start == (uint64_t) o.start;
     }
     inline void dump() {
         printf("(%lx, %u, %u)", (uint64_t)(start), len, sn);

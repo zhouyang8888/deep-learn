@@ -1,9 +1,11 @@
 
 #include "mem.h"
 #include "cuda_error.h"
+
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
@@ -40,6 +42,15 @@ mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197)
 
 m_info* mem::alloc_block(mem_block2& b_s)
 {
+    /*
+       printf("################\n");
+       b_s.dump();
+       printf("\nSize table:\n");
+       tables[DEVICE][FREE][SIZE]->dump();
+       printf("Addr table:\n");
+       tables[DEVICE][FREE][ADDR]->dump();
+       printf("****************\n");
+     */
     jump_node* node = tables[DEVICE][FREE][SIZE]->ge(b_s);
     if (node) {
         mem_block2* freeb2 = dynamic_cast<mem_block2*>(tables[DEVICE][FREE][SIZE]->remove(node));
@@ -108,14 +119,17 @@ m_info* mem::new_block(int size)
             break;
         }
     }
-    if (info) info->sz = size;
+    if (info) {
+        info->sz = size;
+        dp2info.insert(addr_key(info->p_d), info);
+    } 
 
-    printf("exit \n");
-    tables[DEVICE][FREE][SIZE]->dump();
-    tables[DEVICE][MALLOC][SIZE]->dump();
-    tables[DEVICE][FREE][ADDR]->dump();
-    tables[DEVICE][MALLOC][ADDR]->dump();
-    dp2info.insert(addr_key(info->p_d), info);
+    /*
+       tables[DEVICE][FREE][SIZE]->dump();
+       tables[DEVICE][MALLOC][SIZE]->dump();
+       tables[DEVICE][FREE][ADDR]->dump();
+       tables[DEVICE][MALLOC][ADDR]->dump();
+     */
     return info;
 }
 
@@ -136,8 +150,7 @@ void mem::free_block(m_info* info)
 void* mem::swap_out(mem_block& block)
 {
     // get free host block
-    mem_block2 host_block_s(block);
-    host_block_s.sn = 0;
+    mem_block2 host_block_s(0, block.len, 0);
 
     jump_node* free_host_node_s = tables[HOST][FREE][SIZE]->ge(host_block_s);
     mem_block2* free_host_block_s = dynamic_cast<mem_block2*>(free_host_node_s->b);
@@ -295,18 +308,28 @@ m_info* mem::get_host_addr_info(void* addr)
 #ifdef __TEST_MEM__
 #undef __TEST_MEM__
 
+#include <time.h>
+#include <cstdlib>
+
 int main(int argc, char** argv)
 {
-    mem mm(1024, 204800);
+    mem mm(1024, 51200);
 
-    m_info* p1 = mm.new_block(512);
-    m_info* p2 = mm.new_block(256);
-    m_info* p3 = mm.new_block(512);
-    m_info* p4 = mm.new_block(256);
-    m_info* p5 = mm.new_block(256);
+    srand(time(0));
+    for (int i = 0; i < 150; ++i) {
+        int sz = 1 + rand() % 512;
+        mm.new_block(sz);
+    }
+    /*
+       m_info* p1 = mm.new_block(512);
+       m_info* p2 = mm.new_block(256);
+       m_info* p3 = mm.new_block(512);
+       m_info* p4 = mm.new_block(256);
+       m_info* p5 = mm.new_block(256);
     // mm.get(p2);
     m_info* p6 = mm.new_block(128);
     mm.get(p2);
+     */
 
     return 0;
 }
