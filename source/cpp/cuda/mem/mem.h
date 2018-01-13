@@ -28,7 +28,7 @@ class m_info {
 public:
 	void* p_h;
 	void* p_d;
-	int sz;
+	size_t sz;
 public:
     inline m_info(): p_h(0), p_d(0), sz(0){}
 };
@@ -53,13 +53,13 @@ class mem {
 
         jump_table* tables[2][2][2];
 
-        mem(int dsize, int hsize);
-        m_info* new_block(int size);
+        mem(size_t dsize, size_t hsize);
+        m_info* new_block(size_t size);
         void free_block(m_info* info);
         void* get(m_info* info);
 
 
-        inline int align(int size) { return ((size + 3) >> 2) << 2; }
+        inline size_t align(size_t size) { return ((size + 3) >> 2) << 2; }
         m_info* get_device_addr_info(void* addr);
         m_info* get_host_addr_info(void* addr);
     private:
@@ -72,13 +72,13 @@ class mem {
 
         void* host_start;
         void* device_start;
-        uint64_t host_capacity;
-        uint64_t device_capacity;
+        size_t host_capacity;
+        size_t device_capacity;
 
     private:
         void free_block(jump_table* malloced_p, jump_table* malloced_s, 
                         jump_table* freed_p, jump_table* freed_s, 
-                        void* p, int size);
+                        void* p, size_t size);
         void drop_block_into_free(jump_table* free_p, jump_table* free_s
                                   , mem_block* b_p, mem_block2* b_s);
         jump_node* select_malloc_node(mem_block2& b_s);

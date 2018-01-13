@@ -10,10 +10,10 @@ class mem_block : public block
 {
 public:
     void* start;
-    uint32_t len;
+    size_t len;
     uint32_t sn;
 
-    inline mem_block(void* start, uint32_t len, uint32_t sn=0) : start(start), len(len), sn(sn) {}
+    inline mem_block(void* start, size_t len, uint32_t sn=0) : start(start), len(len), sn(sn) {}
     inline mem_block(const mem_block& b) : start(b.start), len(b.len), sn(b.sn) {}
 
     inline bool operator<(const block& t) const {
@@ -30,7 +30,7 @@ public:
     }
 
     inline void dump() {
-        printf("(%lx, %x, %u)", (uint64_t)(start), len, sn);
+        printf("(%lx, %lx, %u)", (uint64_t)(start), len, sn);
     }
 
 };
@@ -38,7 +38,7 @@ public:
 class mem_block2 : public mem_block 
 {
 public:
-    inline mem_block2(void* start, uint32_t len, uint32_t sn=0) : mem_block(start, len, sn) {}
+    inline mem_block2(void* start, size_t len, uint32_t sn=0) : mem_block(start, len, sn) {}
     inline mem_block2(const mem_block& b) : mem_block(b) {}
     inline bool operator<(const block& t) const {
         const mem_block2& o = dynamic_cast<const mem_block2&>(t);
@@ -55,12 +55,12 @@ public:
         return len == o.len && sn == o.sn && (uint64_t) start == (uint64_t) o.start;
     }
     inline void dump() {
-        printf("(%lx, %x, %u)", (uint64_t)(start), len, sn);
+        printf("(%lx, %lx, %u)", (uint64_t)(start), len, sn);
     }
 public:
-    static int cnt;
+    static uint32_t cnt;
 };
 
-int mem_block2::cnt = 0;
+uint32_t mem_block2::cnt = 0;
 #endif
 

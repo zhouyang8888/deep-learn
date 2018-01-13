@@ -19,8 +19,9 @@ const int mem::SIZE   = 1;
 
 // #define LOG printf("%s(%d), %s\n", __FILE__, __LINE__, __FUNCTION__)
 #define LOG ;
-mem::mem(int dsize, int hsize) : hp2info(197), dp2info(197), host_capacity(hsize), device_capacity(dsize)
+mem::mem(size_t dsize, size_t hsize) : hp2info(197), dp2info(197), host_capacity(hsize), device_capacity(dsize)
 {
+    printf("size_t len = %lu\n", sizeof(size_t));
     LOG;
     for(int i = 0; i < 2; ++i)
         for(int j = 0; j < 2; ++j)
@@ -89,10 +90,10 @@ jump_node* mem::select_malloc_node(mem_block2& b_s)
     
     return node;
 }
-m_info* mem::new_block(int size)
+m_info* mem::new_block(size_t size)
 {
     LOG;
-    int align_size = mem::align(size);
+    size_t align_size = mem::align(size);
     mem_block2 b_s(0, align_size, 0);
 
     m_info* info = 0;
@@ -269,10 +270,10 @@ void mem::drop_block_into_free(jump_table* freed_p, jump_table* freed_s, mem_blo
 }
 void mem::free_block(jump_table* malloced_p, jump_table* malloced_s, 
                      jump_table* freed_p, jump_table* freed_s, 
-                     void* p, int size)
+                     void* p, size_t size)
 {
     LOG;
-    int aligned_size = this->align(size);
+    size_t aligned_size = this->align(size);
     mem_block b(p, aligned_size, 0);
     block* block_p = malloced_p->remove(b);
     if (block_p) {
@@ -395,39 +396,44 @@ m_info* mem::get_host_addr_info(void* addr)
 
 int main(int argc, char** argv)
 {
-    mem mm(1024, 51200 - 1024);
+    size_t hsize = (1ul << 32) + (1ul << 31);
+    // size_t dsize = (1ul << 31) + (1ul << 29);
+    // size_t dsize = 3164405760ul;
+    size_t dsize = 3000000000ul;
+
+    mem mm(dsize, hsize);
 
     srand(time(0));
     
-#define SIZE 160
+#define SIZE (1ul << 9) 
     m_info* infos[SIZE];
-    int size = 0;
-    for (int i = 0; i < 1500000; ++i) {
-        int sz = 1 + rand() % 512;
-        int align_sz = ((sz + 3) >> 2 << 2);
+    size_t size = 0;
+    for (int i = 0; i < 150000; ++i) {
+        size_t sz = 1 + rand() % ((hsize + dsize) / ((SIZE >> 1) + (SIZE >> 4) + (SIZE >> 5)));
+        size_t align_sz = mm.align(sz);
         int idx = i % SIZE;
 
         if (i >= SIZE) {
             void* p = mm.get(infos[idx]);
             assert(p);
-            int result;
-            cudaMemcpy(&result, p, sizeof(int), cudaMemcpyDeviceToHost);
+            size_t result;
+            cudaMemcpy(&result, p, sizeof(size_t), cudaMemcpyDeviceToHost);
             cudaDeviceSynchronize();
             assert(result == infos[idx]->sz);
 
-            printf("Free %d\n", ((infos[idx]->sz + 3) >> 2) << 2);
-            size -= ((infos[idx]->sz + 3) >> 2) << 2;
+            printf("Free %lu\n", mm.align(infos[idx]->sz));
+            size -= mm.align(infos[idx]->sz);
             mm.free_block(infos[idx]);
             delete infos[idx];
         }
 
-        printf("[%d th, %d]: Host size: %d - %d = %d\n", i, sz, 51200, size, 51200 - size);
+        printf("[%d th, %lu]: Host size: %lu - %lu = %lu\n", i, sz, hsize + dsize, size, hsize + dsize - size);
         infos[idx] = mm.new_block(sz);
-        cudaMemcpy(infos[idx]->p_d, &infos[idx]->sz, sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(infos[idx]->p_d, &infos[idx]->sz, sizeof(size_t), cudaMemcpyHostToDevice);
         // cudaMemset(infos[idx]->p_d, (infos[idx]->sz & 0xFF), infos[idx]->sz);
         cudaDeviceSynchronize();
         size += align_sz;
-        printf("Alloc %d\n", align_sz);
+        printf("Alloc %lu\n", align_sz);
     }
 #undef SIZE
     /*
